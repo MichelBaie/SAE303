@@ -284,4 +284,175 @@ FreePBX est désormais installé et correctement configuré !
 
 #### Étape 7 (Bonus) : Auto-Provisioning des Yealink
 
-Il est possible d’approfondir
+Il est nécessaire de configurer manuellement les adresses IP et numéros SIP sur les téléphones Yealink, ce qui peut-être fort contraignant en entreprise quand on a un parc de téléphones énorme à gérer.
+
+Cette partie est extraite du sujet de TP de Sami Evangelista.
+
+- Installer isc-dhcp-server sur le serveur FreePBX
+
+```
+sudo apt update
+sudo apt install isc-dhcp-server -y
+```
+
+- Configurer l’interface d’écoute du serveur DHCP
+
+```
+sudo nano /etc/default/isc-dhcp-server
+```
+
+```
+INTERFACESv4="ens34"
+```
+
+- Créer la configuration du serveur DHCP
+
+```
+sudo nano /etc/dhcp/dhcpd.conf
+```
+
+```
+# Définition du sous-réseau 192.168.1.0/24
+subnet 192.168.1.0 netmask 255.255.255.0 {
+    # Plage d'adresses DHCP
+    range 192.168.1.10 192.168.1.100;
+    # Passerelle (gateway)
+    option routers 192.168.1.1;
+    # Masque de sous-réseau
+    option subnet-mask 255.255.255.0;
+    # Option TFTP (pour le provisionning des tels)
+    option tftp-server-name "tftp://192.168.1.1";
+}
+```
+
+- Récupérer l’adresse MAC d’un téléphone Yealink et créer le fichier de configuration associé
+
+```
+sudo nano /tftpboot/addressemacdutelephone.cfg
+```
+
+```
+#!version:1.0.0.1
+account.1.enable = 1
+account.1.label = Numéro de téléphone SIP
+account.1.display_name = Nom de l'appelant
+account.1.auth_name = Numéro de Téléphone SIP
+account.1.user_name = Numéro de Téléphone SIP
+account.1.pasword = Mot de passe du numéro SIP
+account.1.sip_server.1.address = IP du serveur FreePBX
+lang.gui = French
+```
+
+- Redémarrer le serveur DHCP et le serveur TFTP
+
+```
+sudo systemctl restart isc-dhcp-server tftpd-hpa
+```
+
+- Redémarrer le téléphone Yealink en mode usine et vérifier si le téléphone récupère le compte SIP
+
+- Vérifier le bon fonctionnement du téléphone en appelant le ```*97```
+
+## II - Jitsi Meet
+
+#### Étape 0 : Préparer FreePBX
+
+- Créer un poste SIP pour Jitsi avec pour numéro 1000
+
+![image-20250315220329769](img/image-20250315220329769.png)
+
+#### Étape 1 : Installer le Docker Engine
+
+```
+sudo curl -sSL https://get.docker.com/ | bash
+```
+
+#### Étape 2 : Télécharger les fichiers Jitsi
+
+```
+wget $(curl -s https://api.github.com/repos/jitsi/docker-jitsi-meet/releases/latest | grep 'zip' | cut -d\" -f4)
+unzip stable*
+cd jitsi*
+cp env.example .env
+./gen-passwords.sh
+mkdir -p ~/.jitsi-meet-cfg/{web,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri}
+
+cat <<EOF >> .env
+PUBLIC_URL=https://192.168.1.1:8443
+JVB_ADVERTISE_IPS=192.168.1.1
+JIGASI_SIP_URI=1000@192.168.1.1
+JIGASI_SIP_PASSWORD=jitsi
+JIGASI_SIP_SERVER=192.168.1.1
+JIGASI_SIP_PORT=5060
+JIGASI_SIP_TRANSPORT=UDP
+ENABLE_LETS_ENCRYPT=0
+JVB_DISABLE_STUN=true
+TZ=Europe/Paris
+ENABLE_AUTH=0
+ENABLE_GUESTS=1
+EOF
+
+mkdir -p ./config/web/certs
+if [ ! -f "./config/web/certs/cert.crt" ] || [ ! -f "./config/web/certs/cert.key" ]; then
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout "./config/web/certs/cert.key" \
+        -out "./config/web/certs/cert.crt" \
+        -subj "/C=FR/ST=Ile-de-France/L=Villetaneuse/O=Universite Sorbonne Paris Nord/OU=IUT de Villetaneuse/CN=sae.iutv.univ-paris13.fr"
+fi
+sed -i '/- ${CONFIG}\/web:\/config:Z/ a\
+            - .\/config\/web\/certs\/cert.crt:\/config\/keys\/cert.crt:Z\
+            - .\/config\/web\/certs\/cert.key:\/config\/keys\/cert.key:Z' docker-compose.yml
+```
+
+
+```
+docker compose -f docker-compose.yml -f jigasi.yml up -d
+```
+
+https://192.168.1.1:8443
+
+#### Étape 3 : Visioconférence + SIP
+
+* Passer un appel entre deux ordinateurs en accédant à https://192.168.1.1:8443/ depuis deux ordinateurs du même réseau local
+* Appeler un téléphone SIP via le bouton d’invitation
+
+### III - Nextcloud Hub
+
+#### Étape 1 : Forger le compose.yaml
+
+```
+mkdir nextcloud
+nano compose.yaml
+```
+
+```yaml
+services:
+  nextcloud:
+    image: ghcr.io/linuxserver/nextcloud:latest
+    container_name: nextcloud
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      - ./nextcloud_config/:/config
+      - ./nextcloud_data:/data
+    ports:
+      - 7443:443
+    restart: unless-stopped
+  mariadb:
+    image: ghcr.io/linuxserver/mariadb:latest
+    container_name: mariadb
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=nextcloud
+    volumes:
+      - ./mariadb_config/:/config
+    restart: unless-stopped
+```
+
