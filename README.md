@@ -70,7 +70,7 @@ et sélectionner la bonne interface réseau physique dans la configuration Bridg
 #### Étape 2 : Installation de Debian 12
 
 * Démarrer la machine virtuelle et installer Debian
-* Sélectionner **ens33 (NAT)** comme interface principale.
+* Sélectionner **ens33 (NAT)** comme interface principale
 
 ![image-20250315135052350](img/image-20250315135052350.png)
 
@@ -78,11 +78,11 @@ et sélectionner la bonne interface réseau physique dans la configuration Bridg
 
 ![image-20250315135144491](img/image-20250315135144491.png)
 
-* Ne pas définir de mot de passe root ; créer un utilisateur disposant des permissions **sudo**.
+* Ne pas définir de mot de passe root ; créer un utilisateur disposant des permissions **sudo**
 
 ![image-20250315135239614](img/image-20250315135239614.png)
 
-* Sélectionner **XFCE** comme environnement de bureau (plus léger) et activer le **serveur SSH** pour faciliter l'administration à distance.
+* Sélectionner **XFCE** comme environnement de bureau (plus léger) et activer le **serveur SSH** pour faciliter l'administration à distance
 
 ![image-20250315135552894](img/image-20250315135552894.png)
 
@@ -246,3 +246,42 @@ sudo apt install linphone -y
 * Appeler ```*97``` et vérifier si le son fonctionne
 
 ![image-20250315163850005](img/image-20250315163850005.png)
+
+#### Étape 6.2 : Connecter un Yealink T42U
+
+Cette partie est extraite du sujet de TP de Sami Evangelista.
+
+Nous allons redémarrer le téléphone en mode usine pour revenir à une configuration vierge.
+
+* Mettre le téléphone sous tension
+* Redémarrer le téléphone en mode usine : laisser le bouton OK appuyé pendant quelques secondes puis confirmer le redémarrage.
+
+Une fois le téléphone redémarré, nous allons d’abord configurer statiquement ses paramètres IP.
+
+* Aller dans le menu “3 Settings” -> “2 Advanced Settings” (le mot de passe est admin) -> “2 Network” -> “1 WAN Port” -> “2 IPv4” -> “2 Static IPv4 Client”
+* Définir une IP du réseau 192.168.1.0/24 (ex : 192.168.1.11), et choisir comme passerelle l’IP du FreePBX (192.168.1.1)
+* Sauvegarder les paramètres : “Save”
+
+Une fois la configuration IP appliquée, ping le téléphone depuis le serveur FreePBX.
+Une fois que les pings passent, configurer la ligne SIP.
+
+* Aller dans le menu “3 Settings” -> “2 Advanced Settings” -> “1 Accounts” -> “1.”
+* Passer “Active line” à “Enabled”
+* Saisir les paramètres suivants :
+  * Display Name : Le nom qui s’affichera quand le correspondant recevra un appel
+  * Register Name : Numéro du compte SIP
+  * User Name : Numéro du compte SIP
+  * Password : Mot de passe du compte SIP
+  * SIP Server 1 : IP du FreePBX
+* Sauvegarder les paramètres : “Save”
+
+Une fois les paramètres saisis, le Display Name devrait s’afficher sur l’écran du téléphone.
+
+* Vérifier la connectivité en appelant le ```*97```
+* Effectuer un appel entre le Yealink et le Softphone
+
+FreePBX est désormais installé et correctement configuré !
+
+#### Étape 7 (Bonus) : Auto-Provisioning des Yealink
+
+Il est possible d’approfondir
