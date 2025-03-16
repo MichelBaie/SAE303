@@ -1,7 +1,9 @@
 # SAÉ303 – Concevoir un réseau informatique adapté au multimédia  
+*La dernière version de ce sujet de SAÉ est disponible sur le lien GitHub suivant : [SAE303](https://github.com/MichelBaie/SAE303)*
+
 **Rédigé par :** Tristan BRINGUIER et Jack CORRÊA DO CARMO  
 **Sujet initial :** Mr. Mohamed Amine Ouamri et Mme. Yamina Amzal  
-**Contexte :** Réalisé dans le cadre de la deuxième année de BUT Réseaux et Télécommunications, parcours Réseaux Opérateurs Multimédia à l’IUT de Villetaneuse.
+**Contexte :** Réalisé dans le cadre de la deuxième année de BUT Réseaux et Télécommunications, parcours Réseaux Opérateurs Multimédia à l’IUT de Villetaneuse
 
 ---
 
@@ -51,6 +53,8 @@ Dans le cadre de cette SAÉ, nous proposons la conception d’un réseau informa
 ---
 
 ## Objectif de la SAÉ
+
+![image-20250316204126174](img/image-20250316204126174.png)
 
 L’objectif de cette SAÉ est de mettre en place :
 
