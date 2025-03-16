@@ -274,7 +274,7 @@ sudo apt install linphone -y
 > [!WARNING]  
 > Si jamais des informations erronées ont été rentrées par erreur, il est possible que le Sangoma Firewall bannisse l’adresse IP du client.
 > Pour lister les bannissements, sur le serveur FreePBX : `fail2ban-client banned`
-> Pour débannir toutes les adresses IPs : `fail2ban-client unban --all`
+> Pour débannir toutes les adresses IPs, sur le serveur FreePBX : `fail2ban-client unban --all`
 
 ![image-20250315163711564](img/image-20250315163711564.png)
 
@@ -290,48 +290,54 @@ Nous avons maintenant un Softphone SIP connecté à notre FreePBX ! Pour passer 
 
 #### Étape 6.2 : Connecter un Yealink T42U
 
-Cette étape s’appuie grandement sur les [cours](./pdf/R316-ROM-cours.pdf) et [TPs](./pdf/R316-ROM-tp.pdf) de [Sami Evangelista](https://lipn.fr/~evangelista/) !
+*Cette partie s’appuie grandement sur le [cours](./pdf/R316-ROM-cours.pdf) et [TPs](./pdf/R316-ROM-tp.pdf) de [Sami Evangelista](https://lipn.fr/~evangelista/)*
 
-Nous allons redémarrer le téléphone en mode usine pour revenir à une configuration vierge.
+Les téléphones Yealink sont succeptibles d’avoir été utilisés par un autre groupe, et de ne pas avoir été réinitialisé. Nous commençons donc par redémarrer le téléphone en mode usine pour revenir à une configuration vierge.
 
 * Mettre le téléphone sous tension
-* Redémarrer le téléphone en mode usine : laisser le bouton OK appuyé pendant quelques secondes puis confirmer le redémarrage.
+* Laisser le bouton OK appuyé pendant quelques secondes puis confirmer le redémarrage.
 
-Une fois le téléphone redémarré, nous allons d’abord configurer statiquement ses paramètres IP.
+Une fois le téléphone redémarré, nous allons configurer statiquement ses paramètres IP.
 
 * Aller dans le menu “3 Settings” -> “2 Advanced Settings” (le mot de passe est admin) -> “2 Network” -> “1 WAN Port” -> “2 IPv4” -> “2 Static IPv4 Client”
-* Définir une IP du réseau 192.168.1.0/24 (ex : 192.168.1.11), et choisir comme passerelle l’IP du FreePBX (192.168.1.1)
-* Sauvegarder les paramètres : “Save”
+* Définir une IP du réseau 192.168.1.0/24 (ex : 192.168.1.3), et choisir comme passerelle l’IP du FreePBX (ex : 192.168.1.1)
+* Sauvegarder les paramètres en cliquant sur “Save”
 
-Une fois la configuration IP appliquée, ping le téléphone depuis le serveur FreePBX.
-Une fois que les pings passent, configurer la ligne SIP.
+Une fois la configuration IP appliquée, vérifier que le téléphone est bien connecté au réseau en effectuant un ping depuis le FreePBX.
+
+Nous allons maintenant configurer la ligne SIP associée au téléphone
 
 * Aller dans le menu “3 Settings” -> “2 Advanced Settings” -> “1 Accounts” -> “1.”
 * Passer “Active line” à “Enabled”
 * Saisir les paramètres suivants :
-  * Display Name : Le nom qui s’affichera quand le correspondant recevra un appel
-  * Register Name : Numéro du compte SIP
-  * User Name : Numéro du compte SIP
-  * Password : Mot de passe du compte SIP
-  * SIP Server 1 : IP du FreePBX
-* Sauvegarder les paramètres : “Save”
+  * Display Name : Le nom qui s’affichera quand le destinataire recevra un appel
+  * Register Name : Numéro de ligne SIP
+  * User Name : Numéro de ligne SIP
+  * Password : Mot de passe de la ligne SIP
+  * SIP Server 1 : L’IP du serveur FreePBX
+* Sauvegarder les paramètres en cliquant sur “Save”
 
-Une fois les paramètres saisis, le Display Name devrait s’afficher sur l’écran du téléphone.
+Une fois les paramètres saisis, si l’on reviens sur l’écran d’accueil, le Display Name devrait s’afficher sur l’écran du téléphone.
 
-* Vérifier la connectivité en appelant le ```*97```
-* Effectuer un appel entre le Yealink et le Softphone
+> [!WARNING]  
+> Si jamais des informations erronées ont été rentrées par erreur, il est possible que le Sangoma Firewall bannisse l’adresse IP du téléphone.
+> Pour lister les bannissements, sur le serveur FreePBX : `fail2ban-client banned`
+> Pour débannir toutes les adresses IPs, sur le serveur FreePBX : `fail2ban-client unban --all`
 
-FreePBX est désormais installé et correctement configuré !
+* Vérifier le bon fonctionnement du téléphone en appelant le ```*97```
+* Effectuer un appel entre le Softphone et le Yealink
 
-#### Ne pas oublier de sourcer !
+Notre serveur FreePBX est désormais entièrement installé. Nous avons vu comment créer des lignes SIP et passer des appels entre différents postes.
 
 #### Étape 7 (Bonus) : Auto-Provisioning des Yealink
 
-Il est nécessaire de configurer manuellement les adresses IP et numéros SIP sur les téléphones Yealink, ce qui peut-être fort contraignant en entreprise quand on a un parc de téléphones énorme à gérer.
+*Cette partie s’appuie grandement sur le [cours](./pdf/R316-ROM-cours.pdf) et [TPs](./pdf/R316-ROM-tp.pdf) de [Sami Evangelista](https://lipn.fr/~evangelista/)*
 
-Cette partie est extraite du sujet de TP de Sami Evangelista.
+Jusqu’ici, il est nécessaire de configurer manuellement les adresses IP et numéros SIP sur les téléphones Yealink, ce qui peut-être fort contraignant en entreprise quand on a un grand parc de téléphones à gérer. Nous allons donc implémenter un serveur DHCP qui s’occupera de faire un auto-provisioning des téléphones.
 
-- Installer isc-dhcp-server sur le serveur FreePBX
+Les commandes sont à effectuer sur le serveur FreePBX.
+
+- Installer isc-dhcp-server
 
 ```
 sudo apt update
