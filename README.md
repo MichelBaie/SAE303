@@ -102,7 +102,7 @@ En plus de reposer sur une large communauté et de proposer de nombreuses foncti
 
 #### Étape 1 : Création et installation de la machine virtuelle
 
-- Télécharger l’ISO de Debian 12 sur le [site officiel Debian](https://www.debian.org/)
+- Télécharger l’ISO de Debian 12 sur le [site officiel Debian](https://www.Debian.org/)
 - Créer une nouvelle machine virtuelle sur VMWare avec les caractéristiques suivantes :
   - **CPU : 4 cœurs**
   - **RAM : 4 Go**
@@ -121,7 +121,7 @@ En plus de reposer sur une large communauté et de proposer de nombreuses foncti
 
 #### Étape 2 : Configuration des interfaces réseau
 
-La configuration des adresses IP sous Debian repose par défaut en DHCP via NetworkManager. Notre configuration réseau étant particulière, il est nécessaire de configurer manuellement les interfaces de manière permanante grâce au fichier /etc/network/interfaces.
+La configuration des adresses IP sous Debian repose par défaut en DHCP via NetworkManager. Notre configuration réseau étant particulière, il est nécessaire de configurer manuellement les interfaces de manière permanente grâce au fichier /etc/network/interfaces.
 
 - Modifier le fichier de configuration réseau :
 
@@ -147,14 +147,14 @@ Le réseau de notre Debian est maintenant parfaitement configuré ! Nous allons 
 
 #### Étape 3 : Installation de FreePBX
 
-Nous allons suivre les instructions du guide officiel présent sur le [GitHub de FreePBX](https://github.com/FreePBX/sng_freepbx_debian_install).
+Nous allons suivre les instructions du guide officiel présent sur le [GitHub de FreePBX](https://github.com/FreePBX/sng_freepbx_Debian_install)
 
 - Exécuter les commandes suivantes  :
 
 ```shell
 sudo su -
-wget https://github.com/FreePBX/sng_freepbx_debian_install/raw/master/sng_freepbx_debian_install.sh -O /tmp/sng_freepbx_debian_install.sh
-bash /tmp/sng_freepbx_debian_install.sh
+wget https://github.com/FreePBX/sng_freepbx_Debian_install/raw/master/sng_freepbx_Debian_install.sh -O /tmp/sng_freepbx_Debian_install.sh
+bash /tmp/sng_freepbx_Debian_install.sh
 ```
 
 Le script lance automatiquement l'installation complète de FreePBX avec tous ses modules nécessaires. Cette étape peut prendre du temps, il faut attendre la fin de l'installation sans interruption.
@@ -335,46 +335,48 @@ Notre serveur FreePBX est désormais entièrement installé. Nous avons vu comme
 
 Jusqu’ici, il est nécessaire de configurer manuellement les adresses IP et numéros SIP sur les téléphones Yealink, ce qui peut-être fort contraignant en entreprise quand on a un grand parc de téléphones à gérer. Nous allons donc implémenter un serveur DHCP qui s’occupera de faire un auto-provisioning des téléphones.
 
+Au démarrage, un téléphone va dans un premier temps obtenir une configuration IP auprès d’un serveur DHCP. Le téléphone va ensuite contacter le serveur TFTP transmis  par le serveur DHCP pour télécharger certains fichiers de configuration. Ceux-ci contiendrons, par exemple, l’IP et le port du serveur FreePBX, le numéro de téléphone, ou la langue de l’interface du téléphone.
+
 Les commandes sont à effectuer sur le serveur FreePBX.
 
 - Installer isc-dhcp-server
 
-```
+```shell
 sudo apt update
 sudo apt install isc-dhcp-server -y
 ```
 
 - Configurer l’interface d’écoute du serveur DHCP
 
-```
+```shell
 sudo nano /etc/default/isc-dhcp-server
 ```
 
-```
-INTERFACESv4="ens34"
+```shell
+INTERFACESv4="ens34" # On écoute sur l'interface LAN du Debian
 ```
 
-- Créer la configuration du serveur DHCP
+- Configurer le sous-réseau annoncé par le serveur DHCP
 
-```
+```shell
 sudo nano /etc/dhcp/dhcpd.conf
 ```
 
-```
-# Définition du sous-réseau 192.168.1.0/24
+```shell
+# Configuration DHCP pour le sous-réseau 192.168.1.0/24
 subnet 192.168.1.0 netmask 255.255.255.0 {
-    # Plage d'adresses DHCP
+    # Plage d'adresses attribuées par le DHCP
     range 192.168.1.10 192.168.1.100;
-    # Passerelle (gateway)
+    # Default Gateway du réseau
     option routers 192.168.1.1;
-    # Masque de sous-réseau
-    option subnet-mask 255.255.255.0;
-    # Option TFTP (pour le provisionning des tels)
+    # Adresse du serveur TFTP (qui héberge les fichiers de configuration)
     option tftp-server-name "tftp://192.168.1.1";
 }
 ```
 
-- Récupérer l’adresse MAC d’un téléphone Yealink et créer le fichier de configuration associé
+Après avoir contacté le serveur DHCP, le téléphone va ensuite contacter le serveur TFTP. Le téléphone demande plusieurs fichiers de configurations, notamment un qui est nommé d’après l’adresse MAC du téléphone. Celle-ci étant à priori unique, c‘est le moyen utilisé pour identifier le téléphone.
+
+- Créer dans le répertoire /tftpboot/ un fichier `<adresse-mac-du-telephone>.cfg` (dans les deux-points et avec les caractères alphabétiques en minuscule)
 
 ```
 sudo nano /tftpboot/addressemacdutelephone.cfg
@@ -383,16 +385,16 @@ sudo nano /tftpboot/addressemacdutelephone.cfg
 ```
 #!version:1.0.0.1
 account.1.enable = 1
-account.1.label = Numéro de téléphone SIP
-account.1.display_name = Nom de l'appelant
-account.1.auth_name = Numéro de Téléphone SIP
-account.1.user_name = Numéro de Téléphone SIP
-account.1.pasword = Mot de passe du numéro SIP
-account.1.sip_server.1.address = IP du serveur FreePBX
+account.1.label = <Numéro de téléphone SIP>
+account.1.display_name = <Nom de l'appelant>
+account.1.auth_name = <Numéro de Téléphone SIP>
+account.1.user_name = <Numéro de Téléphone SIP>
+account.1.pasword = <Mot de passe du numéro SIP>
+account.1.sip_server.1.address = <IP du serveur FreePBX>
 lang.gui = French
 ```
 
-- Redémarrer le serveur DHCP et le serveur TFTP
+- Redémarrer le serveur DHCP et le serveur TFTP pour appliquer les configurations
 
 ```
 sudo systemctl restart isc-dhcp-server tftpd-hpa
@@ -402,7 +404,11 @@ sudo systemctl restart isc-dhcp-server tftpd-hpa
 
 - Vérifier le bon fonctionnement du téléphone en appelant le ```*97```
 
+FreePBX possède un nombre inombrable de fonctionnalités, mais nous avons fait le tour de celles essentielles. Voyons désormais comment mêler VoIP et WebRTC en déployant un Jitsi Meet.
+
 ## 2 - Jitsi Meet
+
+
 
 #### Étape 0 : Préparer FreePBX
 
