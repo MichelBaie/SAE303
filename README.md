@@ -158,12 +158,11 @@ bash /tmp/sng_freepbx_debian_install.sh
 ```
 
 Le script lance automatiquement l'installation complète de FreePBX avec tous ses modules nécessaires. Cette étape peut prendre du temps, il faut attendre la fin de l'installation sans interruption.
-
 ![image-20250315141143324](img/image-20250315141143324.png)
 
 À la fin de son exécution, le script affichera des informations telle que l’adresse IP du FreePBX en vert. Nous allons maintenant le configurer avec l’aide de son interface graphique.
 
-#### Étape 5 : Configuration de FreePBX
+#### Étape 4 : Configuration de FreePBX
 
 * Ouvrir un navigateur web et aller sur http://192.168.1.1/
 * Définir le compte utilisateur administrateur de l’instance FreePBX, définir un mail quelconque pour les notifications du système, définir le nom du serveur FreePBX. Puis cliquer sur “Setup System”
@@ -180,23 +179,11 @@ Le script lance automatiquement l'installation complète de FreePBX avec tous se
 
 ![image-20250315144530686](img/image-20250315144530686.png)
 
-* Laisser les paramètres par défaut du Sangoma Smart Firewall
+* Laisser les paramètres par défaut du Sangoma Smart Firewall (dire “Yes” à toutes les propositions)
 
-![image-20250315144624283](img/image-20250315144624283.png)
+- Ignorer toutes les propositions commerciales
 
-![image-20250315144655398](img/image-20250315144655398.png)
-
-![image-20250315144718684](img/image-20250315144718684.png)
-
-![image-20250315144755138](img/image-20250315144755138.png)
-
-![image-20250315144817525](img/image-20250315144817525.png)
-
-![image-20250315144851212](img/image-20250315144851212.png)
-
-- Ignorer toutes les propositions commerciales.
-
-* Pour finaliser l’installation, cliquer sur “Appliquer la configuration” ou “Apply Config” en haut à droite si proposé.
+* Pour finaliser l’installation, cliquer sur “Appliquer la configuration” ou “Apply Config” en haut à droite si proposé
 
 ![image-20250315145408133](img/image-20250315145408133.png)
 
@@ -204,74 +191,105 @@ L’instance FreePBX est désormais installée ! Nous allons maintenant déploye
 
 #### Étape 5 : Création des comptes SIP
 
-* Aller dans “Connectivité > Postes”
+* Aller dans la rubrique “**Connectivité** > **Postes**”
 
 ![image-20250315152623215](img/image-20250315152623215.png)
 
-* Cliquer sur “Ajouter un poste” puis choisir “Ajout nouveau poste SIP”
+* Cliquer sur “**Ajouter un poste**” puis choisir “**Ajout nouveau poste SIP [chan_pjsip]**”
 
 ![image-20250315153348110](img/image-20250315153348110.png)
 
-* Créer un poste SIP : Choisir une extension utilisateur (numéro) et définir le secret (mot de passe)
+* Définir toutes les informations nécessaires au bon fonctionnement de la ligne
+
+  * Extension Utilisateur : Le numéro de la ligne SIP
+  * Nom affiché : Le nom de l’appelant qui sera visible des destinataires
+  * Secret : Le mot de passe du compte SIP qui sera créé pour ce numéro de téléphone
+
+  Il n’est pas nécessaire de modifier les paramètres du gestionnaire d’utilisateur, car celui-ci concerne le service d’annuaire de FreePBX que nous n’utiliserons pas.
+  Une fois les informations rentrées, cliquer sur “Soumettre”
 
 ![image-20250315155008665](img/image-20250315155008665.png)
 
-* Créer un second poste SIP
-* Appliquer la configuration
+* Créer une seconde ligne SIP pour le téléphone Yealink, ou inversement, pour le Softphone
+* Après avoir créé les lignes SIP, appliquer la configuration en cliquant sur “Appliquer la configuration”
 
 ![image-20250315155456600](img/image-20250315155456600.png)
 
+Les comptes / lignes SIP sont désormais créées, nous allons pouvoir connecter des clients SIP pour passer des appels.
+
 #### Étape 6.1 : Connecter un client SIP Softphone
 
-* Installer une seconde machine Debian avec les mêmes étapes que précédemment (configuration des cartes réseaux)
+Nous utiliserons une machine Linux pour sa légèreté avec le client Linphone dessus. Il est également possible sous Windows d’utiliser le client MicroSIP.
 
-```
+* Installer une seconde machine Debian avec la même procédure que pour le serveur FreePBX (faire attention à la configuration des interfaces réseau sur VMWare)
+
+* Configurer les interfaces réseaux
+
+```shell
 sudo nano /etc/network/interfaces
 ```
 
-Configurer comme suit :
+```shell
+auto ens33 # Initialisation de l'interface ens33
+iface ens33 inet dhcp # Configuration via DHCP de l'interface ens33
 
-```
-auto ens33
-iface ens33 inet dhcp
-
-auto ens34
-iface ens34 inet static
-        address 192.168.1.10/24
+auto ens34 # Initialisation de l'interface ens34
+iface ens34 inet static # Configuration de manière statique de l'interface ens34
+        address 192.168.1.2/24 # L'interface ens34 aura pour addresse 192.168.1.2 avec pour masque de sous-réseau un /24 (255.255.255.0)
 ```
 
-* Installer Liphone
+* Installer le softphone SIP Liphone
 
-```
+```shell
 sudo apt update
 sudo apt install linphone -y
 ```
 
-* Démarrer Linphone
+* Ouvrir Linphone
 
 ![image-20250315163004388](img/image-20250315163004388.png)
 
-* Aller sur “Utiliser un compte SIP”
+* Sélectionner “Utiliser un compte SIP” et accepter les conditions d’utilisation
 
 ![image-20250315163059002](img/image-20250315163059002.png)
 
 ![image-20250315163121066](img/image-20250315163121066.png)
 
+
+> [!WARNING]  
+> Il ne faut pas que Linphone soit installé sur la même machine qu’un serveur Asterisk. Il y a un conflit de ports l’empêchant de fonctionner. Sur les machines de TP il est préférable d’éteindre le service Asterisk si installé : `systemctl stop asterisk`
 * Renseigner les informations du compte SIP créé précédemment
+
+  * Nom d’utilisateur : Numéro de ligne SIP
+  * Nom d’affichage : Numéro de l’appelant, visible du destinataire
+  * Domaine SIP : Adresse IP du serveur FreePBX (192.168.1.1)
+  * Transport : UDP (port 5060 par défaut d’Asterisk)
+
+  Puis cliquer sur “Utiliser”
 
 ![image-20250315163216375](img/image-20250315163216375.png)
 
-* Une fois Linphone connecté, l’icône devrait passer au vert
+* Si toutes les informations rentrées sont valides, alors Linphone doit ouvrir une session SIP et passer en vert en haut à gauche comme ci-dessous :
 
+> [!WARNING]  
+> Si jamais des informations erronées ont été rentrées par erreur, il est possible que le Sangoma Firewall bannisse l’adresse IP du client.
+> Pour lister les bannissements, sur le serveur FreePBX : `fail2ban-client banned`
+> Pour débannir toutes les adresses IPs : `fail2ban-client unban --all`
 ![image-20250315163711564](img/image-20250315163711564.png)
 
-* Appeler ```*97``` et vérifier si le son fonctionne
+* Appeler ```*97``` (le numéro de la boîte vocale) et vérifier si l’appel fonctionne
 
 ![image-20250315163850005](img/image-20250315163850005.png)
 
+> [!WARNING]  
+> Si jamais l’appel ne passe pas, vérifier les configurations IP des machines, il faut qu’elles soient toutes sur le même réseau local.
+> Vérifier également l’état du son sous linux, ou analyser les trames réseau avec Wireshark.
+
+Nous avons maintenant un Softphone SIP connecté à notre FreePBX ! Pour passer un appel entre deux téléphones, nous pouvons utiliser deux Softphone SIP, mais l’IUT mets à disposition des Yealink T42U. Voyons maintenant comment les configurer.
+
 #### Étape 6.2 : Connecter un Yealink T42U
 
-Cette partie est extraite du sujet de TP de Sami Evangelista.
+Cette étape s’appuie grandement sur les [cours](./pdf/R316-ROM-cours.pdf) et [TPs](./pdf/R316-ROM-tp.pdf) de [Sami Evangelista](https://lipn.fr/~evangelista/) !
 
 Nous allons redémarrer le téléphone en mode usine pour revenir à une configuration vierge.
 
