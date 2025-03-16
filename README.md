@@ -10,7 +10,7 @@ L’objectif de cette SAÉ est
 ## 0 - Pré-requis
 
 > [!IMPORTANT]  
-> Pour assurer le bon fonctionnement de cette SAE, il est nécessaire d’installer et configurer des logiciel de manière spécifique.
+> Pour assurer le bon fonctionnement de cette SAE, il est nécessaire d’installer et configurer des logiciels de manière spécifique.
 
 
 - **VMWare Workstation Pro** : Pour créer et gérer les machines virtuelles. VMWare est désormais gratuit pour les particuliers et étudiants. Il intègre automatiquement les outils invités permettant le redimensionnement automatique de l'écran et la gestion simplifiée du presse-papier.
@@ -75,7 +75,7 @@ Chaque machine virtuelle doit disposer de deux interfaces réseau :
 * Une interface “WAN” (NAT) gérée automatiquement par VMWare. Cette interface permet un accès simple à et constant à Internet
 * Une interface “LAN” (Bridgée) reliée à un port Ethernet physique de l’ordinateur. Cette interface permet un accès physique aux équipements branchés en Ethernet à l’ordinateur. (ex : Switch Cisco, Téléphone Yealink, etc.)
 
-ILLUSTRATION RÉSEAU GNS3
+#### ILLUSTRATION RÉSEAU GNS3
 
 > [!IMPORTANT]  
 > Il est primordial de vérifier que l’interface Bridgée renvoie vers la bonne interface physique !
@@ -92,7 +92,7 @@ Les machines virtuelles devront être connectées de la sorte :
 - Network Adapter (Interface réseau 1) : NAT
 - Network Adapter 2 (Interface réseau 2) : Bridgée
 
-Sous Debian, les interfaces réseaux apparaîtront respectivement comme ens33 et ens34.
+Sous **Debian**, les interfaces réseaux apparaîtront respectivement comme ens33 et ens34.
 
 ## 1 - VoIP / SIP avec FreePBX (Asterisk)
 
@@ -104,9 +104,9 @@ En plus de reposer sur une large communauté et de proposer de nombreuses foncti
 
 - Télécharger l’ISO de Debian 12 sur le [site officiel Debian](https://www.debian.org/)
 - Créer une nouvelle machine virtuelle sur VMWare avec les caractéristiques suivantes :
-  - CPU : 4 cœurs
-  - RAM : 4 Go
-  - Stockage : 32 Go
+  - **CPU : 4 cœurs**
+  - **RAM : 4 Go**
+  - **Stockage : 32 Go**
 
 * Configurer les interfaces réseau en suivant la procédure dans les pré-requis
 * Démarrer la machine virtuelle et installer Debian
@@ -117,7 +117,7 @@ En plus de reposer sur une large communauté et de proposer de nombreuses foncti
 * Sélectionner **XFCE** comme environnement de bureau (plus léger)
 ![image-20250315135552894](img/image-20250315135552894.png)
 
-Debian est maintenant installé ! Nous allons maintenant configurer les interfaces réseaux.
+**Debian** est maintenant installé ! Nous allons maintenant configurer les interfaces réseaux.
 
 #### Étape 2 : Configuration des interfaces réseau
 
@@ -161,7 +161,7 @@ Le script lance automatiquement l'installation complète de FreePBX avec tous se
 
 ![image-20250315141143324](img/image-20250315141143324.png)
 
-A la fin de son exécution, le script affichera des informations telle que l’adresse IP du FreePBX en vert. Nous allons maintenant le configurer avec l’aide de son interface graphique.
+À la fin de son exécution, le script affichera des informations telle que l’adresse IP du FreePBX en vert. Nous allons maintenant le configurer avec l’aide de son interface graphique.
 
 #### Étape 5 : Configuration de FreePBX
 
@@ -194,9 +194,9 @@ A la fin de son exécution, le script affichera des informations telle que l’a
 
 ![image-20250315144851212](img/image-20250315144851212.png)
 
-- Ignorer toutes les propositions commerciales
+- Ignorer toutes les propositions commerciales.
 
-* Pour finaliser l’installation, cliquer sur “Appliquer la configuration” ou “Apply Config” en haut à droite si proposé
+* Pour finaliser l’installation, cliquer sur “Appliquer la configuration” ou “Apply Config” en haut à droite si proposé.
 
 ![image-20250315145408133](img/image-20250315145408133.png)
 
@@ -303,6 +303,8 @@ Une fois les paramètres saisis, le Display Name devrait s’afficher sur l’é
 * Effectuer un appel entre le Yealink et le Softphone
 
 FreePBX est désormais installé et correctement configuré !
+
+#### Ne pas oublier de sourcer !
 
 #### Étape 7 (Bonus) : Auto-Provisioning des Yealink
 
