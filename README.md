@@ -1,162 +1,182 @@
 # SAÉ303 - Concevoir un réseau informatique adapté au multimédia
 
-Cette SAÉ a été réalisée dans le cadre de notre deuxième année de BUT Réseaux et Télécommunications, parcours Réseaux Opérateurs Multimédia, au sein de l’IUT de Villetaneuse.
 
-## Introduction
+Rédigé par Tristan BRINGUIER et Jack CORRÊA DO CARMO. Cette SAÉ a été réalisée dans le cadre de notre deuxième année de BUT Réseaux et Télécommunications parcours Réseaux Opérateurs Multimédia à l’IUT de Villetaneuse. Le sujet initial de cette SAÉ proviens de nos professeurs Mr. Mohamed Amine Ouamri et Mme. Yamina Amzal.
 
-Rédiger une introduction
+## Objectif
+
+L’objectif de cette SAÉ est 
 
 ## 0 - Pré-requis
 
-### Logiciels nécessaires
+> [!IMPORTANT]  
+> Pour assurer le bon fonctionnement de cette SAE, il est nécessaire d’installer et configurer des logiciel de manière spécifique.
 
-- **VMWare Workstation Pro** : Pour créer et gérer les machines virtuelles. VMWare est désormais gratuit pour les particuliers et étudiants. Il intègre automatiquement les outils invités permettant le redimensionnement automatique de l'écran et la gestion simplifiée du presse-papier. Les installateurs pour Linux ou Windows sont disponibles sur le [CDN de VMWare](https://softwareupdate.vmware.com/cds/vmw-desktop/ws/).
-- **Linphone** : Logiciel utilisé pour passer des appels téléphoniques via le réseau virtuel. Linphone est multiplateforme. Alternativement, **MicroSIP** est une option exclusivement pour Windows.
 
-### Configuration réseau des machines virtuelles
+- **VMWare Workstation Pro** : Pour créer et gérer les machines virtuelles. VMWare est désormais gratuit pour les particuliers et étudiants. Il intègre automatiquement les outils invités permettant le redimensionnement automatique de l'écran et la gestion simplifiée du presse-papier.
 
-Pour connecter correctement les téléphones physiques Yealink T42U à notre réseau virtuel, il est impératif de configurer soigneusement les interfaces réseau de nos machines virtuelles sous VMWare.
+### Installer VMWare Workstation Pro sous Linux (Debian)
+
+* Installer les paquets suivants (ce sont des dépendances à VMWare)
+
+```shell
+sudo apt update
+sudo apt install build-essential linux-headers-$(uname -r) -y
+```
+
+* Aller sur [le CDN de VMWare](https://softwareupdate.vmware.com/cds/vmw-desktop/ws/) et sélectionner la dernière version disponible, puis linux, puis core, et télécharger l’archive .tar
+* Décompresser l’archive .tar (remplacer le nom du fichier par celui téléchargé)
+
+```shell
+tar --extract -f VMware-Workstation-17.6.3-24583834.x86_64.bundle.tar
+```
+
+* Exécuter en tant qu’administrateur l’installateur présent dans l’archive
+
+```shell
+chmod +x VMware-Workstation-17.6.3-24583834.x86_64.bundle
+sudo ./VMware-Workstation-17.6.3-24583834.x86_64.bundle
+```
+
+* Démarrer VMWare en ligne de commandes
+
+```shell
+vmware
+```
+
+![image-20250316014946420](img/image-20250316014946420.png)
+![image-20250316015008802](img/image-20250316015008802.png)
+![image-20250316015028985](img/image-20250316015028985.png)
+![image-20250316015045048](img/image-20250316015045048.png)
+
+* Fermer VMWare et redémarrer le linux pour finaliser l’installation
+
+```shell
+sudo reboot
+```
+
+> [!NOTE]  
+> Après redémarrage du linux, VMWare Workstation est installé et prêt à l’emploi !
+
+### Installer VMWare Workstation Pro sous Windows
+
+* Aller sur [le CDN de VMWare](https://softwareupdate.vmware.com/cds/vmw-desktop/ws/) et sélectionner la dernière version disponible, puis windows, puis core, et télécharger l’archive .tar
+* Décompresser l’archive .tar et installer VMWare via l’installateur présent dans l’archive
+
+> [!NOTE]  
+> VMWare Workstation est installé et prêt à l’emploi !
+
+### Configurer le réseau virtuel VMWare
+
+Pour interconnecter avec aisance les téléphones physiques Yealink au réseau virtualisé, il est impératif de configurer soigneusement les interfaces réseau des machines virtuelles sous VMWare.
 
 Chaque machine virtuelle doit disposer de deux interfaces réseau :
 
-- Une interface WAN (NAT) gérée automatiquement par VMWare, permettant un accès constant à Internet.
-- Une interface LAN (Bridged) reliée directement à un port Ethernet physique de l'ordinateur. Cette dernière interface permet la connexion d'un switch réseau, auquel seront reliés les téléphones physiques.
+* Une interface “WAN” (NAT) gérée automatiquement par VMWare. Cette interface permet un accès simple à et constant à Internet
+* Une interface “LAN” (Bridgée) reliée à un port Ethernet physique de l’ordinateur. Cette interface permet un accès physique aux équipements branchés en Ethernet à l’ordinateur. (ex : Switch Cisco, Téléphone Yealink, etc.)
 
-![vmware_XgMoz08DAt](img/vmware_XgMoz08DAt.png)
+ILLUSTRATION RÉSEAU GNS3
 
-Configuration dans VMWare :
+> [!IMPORTANT]  
+> Il est primordial de vérifier que l’interface Bridgée renvoie vers la bonne interface physique !
 
+* Ouvrir le Virtual Network Editor
+![image-20250316020245859](img/image-20250316020245859.png)
+
+- Sélectionner vmnet0 (qui a pour type bridged) et choisir la bonne interface Ethernet
+![image-20250316020321262](img/image-20250316020321262.png)
+
+Les machines virtuelles devront être connectées de la sorte :
 ![image-20250315115222963](img/image-20250315115222963.png)
 
-- Interface réseau **1** : NAT
-- Interface réseau **2** : Bridged
+- Network Adapter (Interface réseau 1) : NAT
+- Network Adapter 2 (Interface réseau 2) : Bridgée
 
-Sous Debian, ces interfaces apparaîtront respectivement comme **ens33** et **ens34**.
+Sous Debian, les interfaces réseaux apparaîtront respectivement comme ens33 et ens34.
 
-Pour garantir que l'interface Bridged pointe vers le bon port Ethernet physique, accéder à Virtual Network Editor :
+## 1 - VoIP / SIP avec FreePBX (Asterisk)
 
-![image-20250315115954513](img/image-20250315115954513.png)
+FreePBX fournis une interface d’administration web simple et intuitive, tout en reposant sur la robustesse du moteur de téléphonie Asterisk. FreePBX est né en 2004 sous le nom d’Asterisk Management Portal, dans le but de simplifier l’administration d’Asterisk. Au fil des années, rebaptisé en FreePBX, il est devenu l’une des solutions de référence pour la gestion de la téléphonie IP dans l’écosystème open source.
 
-et sélectionner la bonne interface réseau physique dans la configuration Bridged :
+En plus de reposer sur une large communauté et de proposer de nombreuses fonctionnalités avancées (gestion des extensions, lignes SIP, files d’attente d’appels, conférences, etc.), FreePBX a longtemps été distribué sous forme d’une distribution Linux indépendante basée sur RHEL (Red Hat Enterprise Linux) — une solution plus robuste pour un usage d’entreprise mais plus complexe à installer. Depuis la version 17, FreePBX est désormais porté sur Debian ce qui facilite grandement l’installation et la maintenance.
 
-![image-20250315120034289](img/image-20250315120034289.png)
-
-## I - FreePBX
-
-#### Étape 1 : Création de la machine virtuelle
+#### Étape 1 : Création et installation de la machine virtuelle
 
 - Télécharger l’ISO de Debian 12 sur le [site officiel Debian](https://www.debian.org/)
 - Créer une nouvelle machine virtuelle sur VMWare avec les caractéristiques suivantes :
-  - CPU : 2 cœur
-  - Mémoire vive : 2 Go
-  - Disque dur : 16 Go
+  - CPU : 4 cœurs
+  - RAM : 4 Go
+  - Stockage : 32 Go
 
-![image-20250315134613384](img/image-20250315134613384.png)
-
-![image-20250315134622907](img/image-20250315134622907.png)
-
-![image-20250315134632755](img/image-20250315134632755.png)
-
-![image-20250315134640002](img/image-20250315134640002.png)
-
-![image-20250315134648226](img/image-20250315134648226.png)
-
-![image-20250315134709773](img/image-20250315134709773.png)
-
-![image-20250315134814311](img/image-20250315134814311.png)
-
-![image-20250315134905723](img/image-20250315134905723.png)
-
-#### Étape 2 : Installation de Debian 12
-
+* Configurer les interfaces réseau en suivant la procédure dans les pré-requis
 * Démarrer la machine virtuelle et installer Debian
 * Sélectionner **ens33 (NAT)** comme interface principale
-
 ![image-20250315135052350](img/image-20250315135052350.png)
-
-* Attribuer un nom d'hôte clair pour identifier facilement la machine (ex : **sae-freepbx**)
-
-![image-20250315135144491](img/image-20250315135144491.png)
-
-* Ne pas définir de mot de passe root ; créer un utilisateur disposant des permissions **sudo**
-
+* Ne pas définir de mot de passe root, le compte créé sera membre du groupe sudoers
 ![image-20250315135239614](img/image-20250315135239614.png)
-
-* Sélectionner **XFCE** comme environnement de bureau (plus léger) et activer le **serveur SSH** pour faciliter l'administration à distance
-
+* Sélectionner **XFCE** comme environnement de bureau (plus léger)
 ![image-20250315135552894](img/image-20250315135552894.png)
 
-#### Étape 3 : Configuration des interfaces réseau
+Debian est maintenant installé ! Nous allons maintenant configurer les interfaces réseaux.
 
-![image-20250315151940455](img/image-20250315151940455.png)
+#### Étape 2 : Configuration des interfaces réseau
 
-Une fois Debian installé, les interfaces réseau ne possèdent pas encore d’adresses IP définies. Pour corriger cela, modifier le fichier de configuration réseau :
+La configuration des adresses IP sous Debian repose par défaut en DHCP via NetworkManager. Notre configuration réseau étant particulière, il est nécessaire de configurer manuellement les interfaces de manière permanante grâce au fichier /etc/network/interfaces.
+
+- Modifier le fichier de configuration réseau :
 
 ```bash
 sudo nano /etc/network/interfaces
 ```
 
-Configurer comme suit :
-
 ```bash
-auto ens33
-iface ens33 inet dhcp
+auto ens33 # Initialisation de l'interface ens33
+iface ens33 inet dhcp # Configuration via DHCP de l'interface ens33
 
-auto ens34
-iface ens34 inet static
-        address 192.168.1.1/24
+auto ens34 # Initialisation de l'interface ens34
+iface ens34 inet static # Configuration de manière statique de l'interface ens34
+        address 192.168.1.1/24 # L'interface ens34 aura pour addresse 192.168.1.1 avec pour masque de sous-réseau un /24 (255.255.255.0)
 ```
 
-* Redémarrer la machine virtuelle pour appliquer les changements.
-* Vérifier avec la commande `ip a` que les adresses IP sont correctement attribuées.
-* Confirmer l'accès à Internet en exécutant un test avec la commande `ping 1.1.1.1`
-
+* Redémarrer la machine virtuelle pour appliquer les changements
+* Vérifier avec la commande `ip a` que les adresses IP sont correctement attribuées (ens33 doit avoir une IP d’un sous réseau obtenu via un DHCP et ens34 avoir l’IP fixe 192.168.1.1/24)
+* Confirmer l'accès à Internet en exécutant un ```ping 1.1.1.1```
 ![image-20250315140922264](img/image-20250315140922264.png)
 
-#### Étape 4 : Installation de FreePBX
+Le réseau de notre Debian est maintenant parfaitement configuré ! Nous allons maintenant installer FreePBX.
 
-L’installation de FreePBX sur Debian s’effectue à l’aide du script officiel disponible sur le [GitHub de FreePBX](https://github.com/FreePBX/sng_freepbx_debian_install).
+#### Étape 3 : Installation de FreePBX
 
-Dans un terminal, exécuter les commandes suivantes en tant qu'utilisateur :
+Nous allons suivre les instructions du guide officiel présent sur le [GitHub de FreePBX](https://github.com/FreePBX/sng_freepbx_debian_install).
 
-```
+- Exécuter les commandes suivantes  :
+
+```shell
 sudo su -
 wget https://github.com/FreePBX/sng_freepbx_debian_install/raw/master/sng_freepbx_debian_install.sh -O /tmp/sng_freepbx_debian_install.sh
 bash /tmp/sng_freepbx_debian_install.sh
 ```
 
-Ce script lance automatiquement l'installation complète de FreePBX avec tous ses modules nécessaires. Cette étape peut prendre du temps, il faut attendre la fin de l'installation sans interruption.
+Le script lance automatiquement l'installation complète de FreePBX avec tous ses modules nécessaires. Cette étape peut prendre du temps, il faut attendre la fin de l'installation sans interruption.
 
 ![image-20250315141143324](img/image-20250315141143324.png)
 
+A la fin de son exécution, le script affichera des informations telle que l’adresse IP du FreePBX en vert. Nous allons maintenant le configurer avec l’aide de son interface graphique.
+
 #### Étape 5 : Configuration de FreePBX
 
-![image-20250315143803476](img/image-20250315143803476.png)
-
 * Ouvrir un navigateur web et aller sur http://192.168.1.1/
-* Définir un nom d’utilisateur et mot de passe administrateur
+* Définir le compte utilisateur administrateur de l’instance FreePBX, définir un mail quelconque pour les notifications du système, définir le nom du serveur FreePBX. Puis cliquer sur “Setup System”
 
 ![image-20250315144016918](img/image-20250315144016918.png)
 
-* Se connecter sur FreePBX Administration
+* Accéder à l’interface d’administration en allant dans l’onglet “FreePBX Administration”. Se connecter avec les identifiants définis précédemment
 
 ![image-20250315144135833](img/image-20250315144135833.png)
 
-* Ignorer les offres commerciales
+* Ignorer toutes les propositions commerciales
 
-![image-20250315144229769](img/image-20250315144229769.png)
-
-![image-20250315144252084](img/image-20250315144252084.png)
-
-![image-20250315144311796](img/image-20250315144311796.png)
-
-![image-20250315144332250](img/image-20250315144332250.png)
-
-![image-20250315144350680](img/image-20250315144350680.png)
-
-![image-20250315144415601](img/image-20250315144415601.png)
-
-* Définir la langue des messages audios et d’affichage
+* Définir la langue du système sur Français
 
 ![image-20250315144530686](img/image-20250315144530686.png)
 
@@ -174,11 +194,13 @@ Ce script lance automatiquement l'installation complète de FreePBX avec tous se
 
 ![image-20250315144851212](img/image-20250315144851212.png)
 
-![image-20250315144911512](img/image-20250315144911512.png)
+- Ignorer toutes les propositions commerciales
 
-* Cliquer, si proposé, sur Appliquer la Configuration. FreePBX est maintenant prêt à l’emploi !
+* Pour finaliser l’installation, cliquer sur “Appliquer la configuration” ou “Apply Config” en haut à droite si proposé
 
 ![image-20250315145408133](img/image-20250315145408133.png)
+
+L’instance FreePBX est désormais installée ! Nous allons maintenant déployer des postes SIP pour connecter nos téléphones physiques et virtuels.
 
 #### Étape 5 : Création des comptes SIP
 
@@ -353,7 +375,7 @@ sudo systemctl restart isc-dhcp-server tftpd-hpa
 
 - Vérifier le bon fonctionnement du téléphone en appelant le ```*97```
 
-## II - Jitsi Meet
+## 2 - Jitsi Meet
 
 #### Étape 0 : Préparer FreePBX
 
@@ -416,7 +438,7 @@ https://192.168.1.1:8443
 * Passer un appel entre deux ordinateurs en accédant à https://192.168.1.1:8443/ depuis deux ordinateurs du même réseau local
 * Appeler un téléphone SIP via le bouton d’invitation
 
-### III - Nextcloud Hub
+### 3 - Nextcloud Hub
 
 #### Étape 1 : Forger le compose.yaml
 
@@ -456,3 +478,10 @@ services:
     restart: unless-stopped
 ```
 
+![image-20250316003659370](img/image-20250316003659370.png)
+
+![image-20250316003800348](img/image-20250316003800348.png)
+
+![image-20250316003929728](img/image-20250316003929728.png)
+
+![image-20250316004014530](img/image-20250316004014530.png)
