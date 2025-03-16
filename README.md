@@ -63,8 +63,7 @@ Les notions techniques couvertes incluent :
 - Les protocoles VoIP : **SIP** (Session Initiation Protocol) pour la signalisation, et **RTP** (Real-time Transport Protocol) pour le transport média.  
 - Les technologies de virtualisation, avec **VMware Workstation** pour héberger nos serveurs et clients.  
 - Les principes de conteneurisation via **Docker**, pour Jitsi et Nextcloud.  
-- L’administration réseau : **DHCP**, **TFTP** pour l’auto-provisioning, configuration IP statique, etc.  
-- Les enjeux de **QoS**, de firewalling (Sangoma Smart Firewall), et de sécurisation (Fail2Ban).
+- L’administration réseau : **DHCP**, **TFTP** pour l’auto-provisioning, configuration IP statique, etc. 
 
 > [!TIP]  
 > L’ensemble des briques (FreePBX, Jitsi Meet, Nextcloud) peuvent être hébergées sur une seule machine virtuelle ou réparties sur plusieurs, selon vos ressources matérielles et vos besoins en isolation/sécurité.
