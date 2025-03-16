@@ -275,6 +275,7 @@ sudo apt install linphone -y
 > Si jamais des informations erronées ont été rentrées par erreur, il est possible que le Sangoma Firewall bannisse l’adresse IP du client.
 > Pour lister les bannissements, sur le serveur FreePBX : `fail2ban-client banned`
 > Pour débannir toutes les adresses IPs : `fail2ban-client unban --all`
+
 ![image-20250315163711564](img/image-20250315163711564.png)
 
 * Appeler ```*97``` (le numéro de la boîte vocale) et vérifier si l’appel fonctionne
