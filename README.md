@@ -452,7 +452,7 @@ sudo curl -sSL https://get.docker.com/ | bash
        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
            -keyout "./config/web/certs/cert.key" \
            -out "./config/web/certs/cert.crt" \
-           -subj "/C=FR/ST=Ile-de-France/L=Villetaneuse/O=Universite Sorbonne Paris Nord/OU=IUT de Villetaneuse/CN=SAÉ.iutv.univ-paris13.fr"
+           -subj "/C=FR/ST=Ile-de-France/L=Villetaneuse/O=Universite Sorbonne Paris Nord/OU=IUT de Villetaneuse/CN=SAE.iutv.univ-paris13.fr"
    fi
    
    sed -i '/- ${CONFIG}\/web:\/config:Z/ a\
@@ -653,7 +653,7 @@ Avant de conclure cette SAÉ, voici quelques points clés à valider :
 1. **Tests d’appels SIP** :  
    - Appels internes entre deux postes SIP (Linphone ↔ Yealink).  
    - Boîte vocale (*97).  
-   - Journaux (logs) Asterisk confirmant le bon acheminement des appels.
+   - Étudier les trames IPs avec Wireshark
 2. **Tests de visioconférence** :  
    - Création de salle Jitsi, partage d’écran, etc.  
    - Appel d’un numéro SIP depuis Jitsi (via la passerelle Jigasi).
