@@ -7,10 +7,10 @@ Rédigé par Tristan BRINGUIER et Jack CORRÊA DO CARMO. Cette SAÉ a été réa
 
 L’objectif de cette SAÉ est 
 
-## 0 - Pré-requis
+## 0 - Pré-requis de cette SAÉ
 
 > [!IMPORTANT]  
-> Pour assurer le bon fonctionnement de cette SAE, il est nécessaire d’installer et configurer des logiciels de manière spécifique.
+> Pour assurer le bon fonctionnement de cette SAÉ, il est nécessaire d’installer et configurer des logiciels de manière spécifique.
 
 
 - **VMWare Workstation Pro** : Pour créer et gérer les machines virtuelles. VMWare est désormais gratuit pour les particuliers et étudiants. Il intègre automatiquement les outils invités permettant le redimensionnement automatique de l'écran et la gestion simplifiée du presse-papier.
@@ -408,113 +408,274 @@ FreePBX possède un nombre inombrable de fonctionnalités, mais nous avons fait 
 
 ## 2 - Jitsi Meet
 
+Jitsi Meet est une plateforme de visioconférence open source basée sur le protocole WebRTC. Elle offre un large éventail de fonctionnalités (partage d’écran, messagerie instantanée, enregistrement des appels, etc.) et ne nécessite pas la création de comptes spécifiques. Grâce à son architecture ouverte et à sa communauté active, Jitsi Meet peut être facilement personnalisé et intégré à d’autres services, notamment des systèmes de téléphonie tels que FreePBX grâce au protocole SIP.
 
+Pour innover nous allons faire fonctionner Jitsi Meet avec des conteneurs grâce à Docker. Docker est un outil de conteneurisation qui permet d’exécuter des applications de manière isolée, cohérente et reproductible. Cette approche facilite la distribution des services et simplifie la maintenance, tout en offrant une meilleure flexibilité et une plus grande évolutivité.
+
+Nous allons faire tourner Jitsi Meet sur la même machine que le FreePBX.
 
 #### Étape 0 : Préparer FreePBX
 
-- Créer un poste SIP pour Jitsi avec pour numéro 1000
+Pour que Jitsi puisse être relié à notre FreePBX afin d’effectuer des appels de la conférence web aux téléphones SIP virtuels et physiques, il est nécessaire de créer un compte SIP pour Jitsi.
+
+- Créer un poste SIP pour Jitsi avec pour numéro 1000, le secret sera par défaut “jitsi”
 
 ![image-20250315220329769](img/image-20250315220329769.png)
 
-#### Étape 1 : Installer le Docker Engine
+#### Étape 1 : Installer Docker
+
+Docker s’appuie sur des fonctionnalités du kernel Linux mais n’est pas installé par défaut.
+
+- Installer Docker en exécutant la commande suivante :
 
 ```
 sudo curl -sSL https://get.docker.com/ | bash
 ```
 
-#### Étape 2 : Télécharger les fichiers Jitsi
+#### Étape 2 : Installer Jitsi
 
-```
+Cette partie s’appuie fortement sur la [documentation officielle de Jitsi](https://jitsi.github.io/handbook/docs/devops-guide/devops-guide-docker/)
+
+Les commandes qui suivent seront à exécuter en tant qu’utilisateur root sur le serveur FreePBX.
+
+* Télécharger la dernière version de Jitsi Meet depuis GitHub
+
+```shell
 wget $(curl -s https://api.github.com/repos/jitsi/docker-jitsi-meet/releases/latest | grep 'zip' | cut -d\" -f4)
-unzip stable*
-cd jitsi*
-cp env.example .env
-./gen-passwords.sh
-mkdir -p ~/.jitsi-meet-cfg/{web,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri}
+```
 
+- Décompresser l’archive téléchargée
+
+```shell
+unzip stable*
+```
+
+- Aller dans le dossier décompressé
+
+```shell
+cd jitsi*
+```
+
+- Copier le fichier de variables d’environnement exemple en fichier de variables d’environnement de production
+
+```shell
+cp env.example .env
+```
+
+- Générer des mots de passes aléatoires pour remplir le fichier de variables d’environnement
+
+```shell
+./gen-passwords.sh
+```
+
+- Créer les dossiers de configurations des différents modules de Jitsi Meet
+
+```shell
+mkdir -p ~/.jitsi-meet-cfg/{web,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri}
+```
+
+- Définir les variables d’environnement propre à notre SAÉ, avec l’intégration SIP de FreePBX
+
+```shell
 cat <<EOF >> .env
+# URL pour accéder au Jitsi Meet (IP du FreePBX + port HTTPS 8443 avec certificat auto-signé)
 PUBLIC_URL=https://192.168.1.1:8443
+# Adresse du serveur Jitsi Meet annoncé par le Jitsi Video Bridge (STUN)
 JVB_ADVERTISE_IPS=192.168.1.1
+# URI du compte SIP créé précédemment pour Jitsi Meet (numéro-sip@ip-freepbx)
 JIGASI_SIP_URI=1000@192.168.1.1
+# Mot de passe du compte SIP créé pour Jitsi Meet
 JIGASI_SIP_PASSWORD=jitsi
+# Addresse IP du serveur SIP FreePBX
 JIGASI_SIP_SERVER=192.168.1.1
+# Port du serveur SIP FreePBX (5060 est le port par défaut d'Asterisk)
 JIGASI_SIP_PORT=5060
+# Protocole du serveur SIP FreePBX (UDP/5060 est le protocole/port par défaut d'Asterisk)
 JIGASI_SIP_TRANSPORT=UDP
+# Désactivation de la génération de certificats SSL par Let's Encrypt (car environnement local)
 ENABLE_LETS_ENCRYPT=0
+# Désactivation de l'annonce d'IP publique pour le WebRTC (car environnement local)
 JVB_DISABLE_STUN=true
+# Définition du fuseau horaire de l'environnement (Europe/Paris car nous sommes à Villetaneuse)
 TZ=Europe/Paris
+# Désactivation de la nécessité d'authentification
 ENABLE_AUTH=0
+# Autorisation de l'accès invité
 ENABLE_GUESTS=1
 EOF
+```
 
+- Générer les certificats SSL auto-signés et les ajouter au docker-compose.yml (Sans certificat SSL, le WebRTC ne fonctionne pas sur les navigateurs web récents par principe de sécurité)
+
+```shell
 mkdir -p ./config/web/certs
 if [ ! -f "./config/web/certs/cert.crt" ] || [ ! -f "./config/web/certs/cert.key" ]; then
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
         -keyout "./config/web/certs/cert.key" \
         -out "./config/web/certs/cert.crt" \
-        -subj "/C=FR/ST=Ile-de-France/L=Villetaneuse/O=Universite Sorbonne Paris Nord/OU=IUT de Villetaneuse/CN=sae.iutv.univ-paris13.fr"
+        -subj "/C=FR/ST=Ile-de-France/L=Villetaneuse/O=Universite Sorbonne Paris Nord/OU=IUT de Villetaneuse/CN=SAÉ.iutv.univ-paris13.fr"
 fi
 sed -i '/- ${CONFIG}\/web:\/config:Z/ a\
             - .\/config\/web\/certs\/cert.crt:\/config\/keys\/cert.crt:Z\
             - .\/config\/web\/certs\/cert.key:\/config\/keys\/cert.key:Z' docker-compose.yml
 ```
 
+- Démarrer Jitsi Meet et Jigasi (module SIP) en arrière-plan
 
-```
+```shell
 docker compose -f docker-compose.yml -f jigasi.yml up -d
 ```
 
-https://192.168.1.1:8443
+![image-20250316134823346](img/image-20250316134823346.png)
+
+Une fois que Docker a pull et run les différents micro services composant Jitsi Meet, on peut retrouver Jitsi Meet depuis un navigateur web à l’URL suivante : https://192.168.1.1:8443
+
+![image-20250316133707590](img/image-20250316133707590.png)
+
+Maintenant que notre instance Jitsi Meet est déployée, nous allons explorer quelques fonctionnalités qu’offre le service.
 
 #### Étape 3 : Visioconférence + SIP
 
-* Passer un appel entre deux ordinateurs en accédant à https://192.168.1.1:8443/ depuis deux ordinateurs du même réseau local
-* Appeler un téléphone SIP via le bouton d’invitation
+- Démarrer une salle de conférence avec pour membres deux ordinateurs sur le même réseau local
+
+* Ajouter un numéro de téléphone SIP à la visioconférence (bouton “Inviter des participants”)
+
+![image-20250316134116869](img/image-20250316134116869.png)
+
+![image-20250316134141307](img/image-20250316134141307.png)
+
+![image-20250316134853967](img/image-20250316134853967.png)
+
+Le téléphone SIP devrait recevoir un appel du numéro Jitsi (1000), si le téléphone est décroché, il sera automatiquement joint à la visioconférence.
+
+![image-20250316134255029](img/image-20250316134255029.png)
+
+Jitsi Meet est une implémentation relativement simple de WebRTC, et rapide à connecter à un serveur SIP. Cependant il est intéressant d’apprendre à manipuler des technologies ne reposant pas sur les mêmes principes et protocoles comme Nextcloud Hub.
 
 ### 3 - Nextcloud Hub
 
-#### Étape 1 : Forger le compose.yaml
+Après avoir déployé une solution « Historique » (Asterisk) puis « Hybride » (Jitsi), nous allons aller plus loin en mettant en place une plateforme de collaboration moderne : Nextcloud. Nextcloud est l’équivalent open source et européen de Office 365 ou Google Workspace, offrant des fonctionnalités de partage et d’édition collaborative de documents, un agenda, une messagerie, une gestion des tâches et bien plus encore. Sa nature open source garantit une grande souplesse d’adaptation et une maîtrise complète des données.
+
+Comme pour Jitsi, nous allons déployer Nextcloud au sein de conteneurs Docker afin de simplifier l’installation, la maintenance et la mise à l’échelle. Nous utiliserons en complément l’outil WatchTower, qui assurera la mise à jour automatique des conteneurs, nous permettant de bénéficier des dernières versions de Nextcloud et de ses composants sans effort supplémentaire.
+
+#### Étape 1 : Créer et démarrer le fichier compose.yaml
+
+Les commandes sont à exécuter sur le serveur FreePBX en tant qu’utilisateur root.
+
+- Créer un dossier nextcloud dans lequel nous stockerons toutes les données relatant de nextcloud
+
+```shell
+mkdir nextcloud
+```
+
+- Aller dans le dossier nextcloud
+
+```shell
+cd nextcloud
+```
+
+- Créer le fichier compose.yaml, il possèdera toutes les informations de nos containers Docker
 
 ```
-mkdir nextcloud
 nano compose.yaml
 ```
 
 ```yaml
 services:
+  # Service n°1 : Application Nextcloud
   nextcloud:
+    # Image "latest" de LinuxServer.io pour l'application Nextcloud
     image: ghcr.io/linuxserver/nextcloud:latest
+    # Nom du container
     container_name: nextcloud
+    # Variables d'environnement pour les permissions de fichiers et fuseau horaire
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Paris
+    # Volumes persistants pour conserver les données après redémarrage
     volumes:
-      - ./nextcloud_config/:/config
-      - ./nextcloud_data:/data
+      - ./nextcloud_config/:/config # Fichiers de configuration
+      - ./nextcloud_data:/data # Données des comptes Nextcloud
+    # Ports ouverts à la machine hôte (hôte:container)
     ports:
       - 7443:443
+    # Politique de redémarrage du container (tant qu'il n'est pas arrêté on le restart automatiquement)
     restart: unless-stopped
+  # Service n°2 : Base de données MariaDB
   mariadb:
+  	# Image "latest" de LinuxServer.io pour l'application MariaDB
     image: ghcr.io/linuxserver/mariadb:latest
+    # Nom du container
     container_name: mariadb
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Paris
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=nextcloud
-      - MYSQL_USER=nextcloud
-      - MYSQL_PASSWORD=nextcloud
+      - MYSQL_ROOT_PASSWORD=root # Mot de passe root de la base de données
+      - MYSQL_DATABASE=nextcloud # Nom de la base de données
+      - MYSQL_USER=nextcloud # Nom d'utilisateur administrateur de la base de données créée ci-dessus
+      - MYSQL_PASSWORD=nextcloud # Mot de passe de l'utilisateur administrateur de la base de données
+    # Volumes persistants pour conserver la base de données après redémarrage
     volumes:
-      - ./mariadb_config/:/config
+      - ./mariadb_config/:/config # Fichiers de la base de données
     restart: unless-stopped
+  # Service n°3 : Outil WatchTower de mises à jour automatique des containers
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    # Accède au socket Docker pour avoir un accès à tous les autres conteneurs Docker
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    restart: unless-stopped
+    # Variables d'environnement pour politique de redémarrage spécifique
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - TZ=Europe/Paris
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_POLL_INTERVAL=3600
+      - WATCHTOWER_ROLLING_RESTART=true
 ```
+
+- Démarrer la stack
+
+```
+docker compose up -d
+```
+
+Une fois la stack démarrée, l’interface web de Nextcloud est accessible à l’adresse suivante : https://192.168.1.1:7443. Il faut désormais configurer Nextcloud.
+
+#### Étape 2 : Installer Nextcloud
+
+- Accéder à Nextcloud via l’URL https://192.168.1.1:7443
 
 ![image-20250316003659370](img/image-20250316003659370.png)
 
+- Définir les identifiants du compte administrateur de l’instance Nextcloud
+
+- Configurer comme type de base de donnés “MySQL/MariaDB” et utiliser les identifiants suivants (extraits du compose.yaml) :
+
+  - Compte de base de données : nextcloud
+  - Mot de passe de la base de données : nextcloud
+  - Nom de la base de données : nextcloud
+  - Hôte de la base de données : mariadb (ne pas confondre avec l’IP de la machine, ce sont les noms des réseaux containers)
+
+  Une fois toutes les informations remplies, cliquer sur “Installer”
+
+- Installer les applications recommandées
+
 ![image-20250316003800348](img/image-20250316003800348.png)
+
+##### Étape 3 : Configurer / Découvrir Nextcloud
+
+- Créer des comptes utilisateurs depuis le menu “Comptes”
 
 ![image-20250316003929728](img/image-20250316003929728.png)
 
+- Tester les applications : Notes, Mails, Calendrier, Contacts
+
+- Depuis l’application Talk, créer un groupe de discussion et effectuer un appel entre plusieurs ordinateurs du même réseau local
+
 ![image-20250316004014530](img/image-20250316004014530.png)
+
+Nous avons installé nexcloud !
