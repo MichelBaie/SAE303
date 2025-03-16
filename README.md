@@ -1,681 +1,564 @@
-# SAÉ303 - Concevoir un réseau informatique adapté au multimédia
+# SAÉ303 – Concevoir un réseau informatique adapté au multimédia
 
+**Rédigé par :** Tristan BRINGUIER et Jack CORRÊA DO CARMO  
+**Sujet initial :** Mr. Mohamed Amine Ouamri et Mme. Yamina Amzal  
+**Contexte :** Réalisé dans le cadre de la deuxième année de BUT Réseaux et Télécommunications, parcours Réseaux Opérateurs Multimédia à l’IUT de Villetaneuse.
 
-Rédigé par Tristan BRINGUIER et Jack CORRÊA DO CARMO. Cette SAÉ a été réalisée dans le cadre de notre deuxième année de BUT Réseaux et Télécommunications parcours Réseaux Opérateurs Multimédia à l’IUT de Villetaneuse. Le sujet initial de cette SAÉ proviens de nos professeurs Mr. Mohamed Amine Ouamri et Mme. Yamina Amzal.
+---
 
-## Objectif
+## Table des matières
 
-L’objectif de cette SAÉ est 
+1. [Introduction générale](#introduction-générale)  
+2. [Objectif de la SAÉ](#objectif-de-la-saé)  
+3. [Pré-requis techniques et mise en place de l’environnement](#pré-requis-techniques-et-mise-en-place-de-lenvironnement)  
+   - [I 3.1. Présentation de VMware Workstation Pro](#i-31-présentation-de-vmware-workstation-pro)  
+   - [I 3.2. Installation sous Linux (Debian)](#i-32-installation-sous-linux-debian)  
+   - [I 3.3. Installation sous Windows](#i-33-installation-sous-windows)  
+   - [I 3.4. Configuration du réseau virtuel VMware](#i-34-configuration-du-réseau-virtuel-vmware)  
+4. [VoIP / SIP avec FreePBX (Asterisk)](#voip--sip-avec-freepbx-asterisk)  
+   - [II 4.1. Rappels sur SIP et la VoIP](#ii-41-rappels-sur-sip-et-la-voip)  
+   - [II 4.2. Installation et configuration du serveur FreePBX](#ii-42-installation-et-configuration-du-serveur-freepbx)  
+   - [II 4.3. Création des lignes SIP](#ii-43-création-des-lignes-sip)  
+   - [II 4.4. Connexion d’un client SIP (Softphone Linphone)](#ii-44-connexion-dun-client-sip-softphone-linphone)  
+   - [II 4.5. Connexion d’un téléphone Yealink T42U](#ii-45-connexion-dun-téléphone-yealink-t42u)  
+   - [II 4.6. Bonus : Auto-Provisioning des Yealink](#ii-46-bonus--auto-provisioning-des-yealink)  
+5. [Jitsi Meet](#jitsi-meet)  
+   - [III 5.1. Présentation générale de WebRTC et Jitsi](#iii-51-présentation-générale-de-webrtc-et-jitsi)  
+   - [III 5.2. Installation de Jitsi Meet via Docker](#iii-52-installation-de-jitsi-meet-via-docker)  
+   - [III 5.3. Visioconférence et intégration SIP avec Jitsi](#iii-53-visioconférence-et-intégration-sip-avec-jitsi)  
+6. [Nextcloud Hub](#nextcloud-hub)  
+   - [IV 6.1. Contexte et principe de Nextcloud](#iv-61-contexte-et-principe-de-nextcloud)  
+   - [IV 6.2. Déploiement de Nextcloud via Docker et WatchTower](#iv-62-déploiement-de-nextcloud-via-docker-et-watchtower)  
+   - [IV 6.3. Installation et configuration de Nextcloud](#iv-63-installation-et-configuration-de-nextcloud)  
+7. [Conclusion et vérifications](#conclusion-et-vérifications)  
+8. [Références et ressources complémentaires](#références-et-ressources-complémentaires)  
 
-## 0 - Pré-requis de cette SAÉ
+---
+
+## Introduction générale
+
+Dans le cadre de cette SAÉ, nous proposons la conception d’un réseau informatique adapté au multimédia, incluant notamment de la téléphonie IP (VoIP), de la visioconférence (WebRTC) et une plateforme collaborative. Les technologies abordées (Asterisk / FreePBX, Jitsi Meet, Nextcloud, etc.) couvrent un large spectre du domaine des réseaux et télécommunications modernes.
+
+---
+
+## Objectif de la SAÉ
+
+L’objectif de cette SAÉ est de mettre en place :
+
+1. Un **service de téléphonie IP** reposant sur Asterisk, administré via FreePBX, et intégrant des téléphones physiques (Yealink) et virtuels (softphones).  
+2. Un **service de visioconférence** basé sur Jitsi Meet (protocole WebRTC), permettant d’inviter en conférence des utilisateurs SIP et d’effectuer des ponts téléphoniques depuis un navigateur web.  
+3. Une **plateforme collaborative** (Nextcloud) offrant des fonctionnalités de partage de fichiers, agenda, messagerie, édition collaborative, etc.  
+
+Les notions techniques couvertes incluent :
+
+- Les protocoles VoIP : **SIP** (Session Initiation Protocol) pour la signalisation, et **RTP** (Real-time Transport Protocol) pour le transport média.  
+- Les technologies de virtualisation, avec **VMware Workstation** pour héberger nos serveurs et clients.  
+- Les principes de conteneurisation via **Docker**, pour Jitsi et Nextcloud.  
+- L’administration réseau : **DHCP**, **TFTP** pour l’auto-provisioning, configuration IP statique, etc.  
+- Les enjeux de **QoS**, de firewalling (Sangoma Smart Firewall), et de sécurisation (Fail2Ban).  
+
+---
+
+## Pré-requis techniques et mise en place de l’environnement
+
+Avant de déployer nos serveurs multimédia, il est impératif de configurer correctement notre environnement de virtualisation. Dans ce projet, **VMware Workstation Pro** sert de base pour héberger les différentes machines virtuelles (VM).
+
+### I 3.1. Présentation de VMware Workstation Pro
+
+VMware Workstation Pro est un hyperviseur de type 2, permettant d’exécuter un ou plusieurs systèmes d’exploitation invités (Guest) sur un même hôte (Host). À la différence des hyperviseurs de type 1 (tels que VMware ESXi), Workstation Pro s’installe sur un système hôte (Windows, Linux, etc.) et s’intègre fortement au poste de travail.
+
+**Avantages :**
+
+- Gestion simple des ressources (CPU, RAM, réseau, stockage).
+- Mode NAT et mode Bridge facilitant la mise en réseau des machines virtuelles.
+- Redimensionnement automatique et compatibilité avec de nombreuses distributions Linux.
+
+### I 3.2. Installation sous Linux (Debian)
 
 > [!IMPORTANT]  
-> Pour assurer le bon fonctionnement de cette SAÉ, il est nécessaire d’installer et configurer des logiciels de manière spécifique.
+> Pour Debian, certaines dépendances (build-essential, linux-headers, etc.) doivent être installées avant.
 
-
-- **VMWare Workstation Pro** : Pour créer et gérer les machines virtuelles. VMWare est désormais gratuit pour les particuliers et étudiants. Il intègre automatiquement les outils invités permettant le redimensionnement automatique de l'écran et la gestion simplifiée du presse-papier.
-
-### Installer VMWare Workstation Pro sous Linux (Debian)
-
-* Installer les paquets suivants (ce sont des dépendances à VMWare)
-
-```shell
-sudo apt update
-sudo apt install build-essential linux-headers-$(uname -r) -y
-```
-
-* Aller sur [le CDN de VMWare](https://softwareupdate.vmware.com/cds/vmw-desktop/ws/) et sélectionner la dernière version disponible, puis linux, puis core, et télécharger l’archive .tar
-* Décompresser l’archive .tar (remplacer le nom du fichier par celui téléchargé)
-
-```shell
-tar --extract -f VMware-Workstation-17.6.3-24583834.x86_64.bundle.tar
-```
-
-* Exécuter en tant qu’administrateur l’installateur présent dans l’archive
-
-```shell
-chmod +x VMware-Workstation-17.6.3-24583834.x86_64.bundle
-sudo ./VMware-Workstation-17.6.3-24583834.x86_64.bundle
-```
-
-* Démarrer VMWare en ligne de commandes
-
-```shell
-vmware
-```
+1. **Installer les paquets requis** :  
+   ```shell
+   sudo apt update
+   sudo apt install build-essential linux-headers-$(uname -r) -y
+   ```
+2. **Télécharger la dernière version de VMware Workstation Pro** depuis le [CDN de VMware](https://softwareupdate.vmware.com/cds/vmw-desktop/ws/), puis extraire l’archive `.tar` :
+   *(sélectionner la dernière version disponible, puis linux, puis core, et télécharger l’archive .tar)*
+   
+   ```shell
+   tar --extract -f VMware-Workstation-17.6.3-24583834.x86_64.bundle.tar
+   ```
+3. **Lancer l’installateur** :  
+   
+   ```shell
+   chmod +x VMware-Workstation-17.6.3-24583834.x86_64.bundle
+   sudo ./VMware-Workstation-17.6.3-24583834.x86_64.bundle
+   ```
+4. **Exécuter VMware** :  
+   ```shell
+   vmware
+   ```
 
 ![image-20250316014946420](img/image-20250316014946420.png)
 ![image-20250316015008802](img/image-20250316015008802.png)
 ![image-20250316015028985](img/image-20250316015028985.png)
 ![image-20250316015045048](img/image-20250316015045048.png)
 
-* Fermer VMWare et redémarrer le linux pour finaliser l’installation
+5. **Redémarrer** la machine hôte Linux pour finaliser l’installation :  
+   ```shell
+   sudo reboot
+   ```
 
-```shell
-sudo reboot
-```
+Une fois l’installation terminée, VMware Workstation Pro est opérationnel !
 
-> [!NOTE]  
-> Après redémarrage du linux, VMWare Workstation est installé et prêt à l’emploi !
+### I 3.3. Installation sous Windows
 
-### Installer VMWare Workstation Pro sous Windows
+1. **Télécharger la dernière version** de VMware Workstation Pro depuis le [CDN de VMware](https://softwareupdate.vmware.com/cds/vmw-desktop/ws/).
+   *(sélectionner la dernière version disponible, puis windows, puis core, et télécharger l’archive .tar)*
+2. **Extraire** l’archive `.tar` puis **lancer** l’installateur `.exe`.
 
-* Aller sur [le CDN de VMWare](https://softwareupdate.vmware.com/cds/vmw-desktop/ws/) et sélectionner la dernière version disponible, puis windows, puis core, et télécharger l’archive .tar
-* Décompresser l’archive .tar et installer VMWare via l’installateur présent dans l’archive
+Une fois l’installation terminée, VMware Workstation Pro est opérationnel !
 
-> [!NOTE]  
-> VMWare Workstation est installé et prêt à l’emploi !
+### I 3.4. Configuration du réseau virtuel VMware
 
-### Configurer le réseau virtuel VMWare
+Pour interconnecter nos serveurs virtuels et du matériel physique (notamment les téléphones Yealink), nous allons utiliser **deux interfaces réseau** sur chaque machine virtuelle :
 
-Pour interconnecter avec aisance les téléphones physiques Yealink au réseau virtualisé, il est impératif de configurer soigneusement les interfaces réseau des machines virtuelles sous VMWare.
-
-Chaque machine virtuelle doit disposer de deux interfaces réseau :
-
-* Une interface “WAN” (NAT) gérée automatiquement par VMWare. Cette interface permet un accès simple à et constant à Internet
-* Une interface “LAN” (Bridgée) reliée à un port Ethernet physique de l’ordinateur. Cette interface permet un accès physique aux équipements branchés en Ethernet à l’ordinateur. (ex : Switch Cisco, Téléphone Yealink, etc.)
-
-#### ILLUSTRATION RÉSEAU GNS3
+- **Interface WAN (NAT)** : Gérée automatiquement par VMware, fournissant un accès permanent à Internet.  
+- **Interface LAN (Bridge)** : Reliée à une carte réseau Ethernet physique, permettant l’interaction avec le monde physique (téléphones IP, switch Cisco, etc.).
 
 > [!IMPORTANT]  
-> Il est primordial de vérifier que l’interface Bridgée renvoie vers la bonne interface physique !
+> Vérifiez dans le **Virtual Network Editor** que le **vmnet0** (bridgé) pointe vers la bonne interface Ethernet.
 
-* Ouvrir le Virtual Network Editor
 ![image-20250316020245859](img/image-20250316020245859.png)
 
-- Sélectionner vmnet0 (qui a pour type bridged) et choisir la bonne interface Ethernet
 ![image-20250316020321262](img/image-20250316020321262.png)
 
-Les machines virtuelles devront être connectées de la sorte :
+**Exemple de configuration sur VMware** :  
+- Network Adapter 1 : **NAT**
+- Network Adapter 2 : **Bridge** vers la carte Ethernet locale
+
 ![image-20250315115222963](img/image-20250315115222963.png)
 
-- Network Adapter (Interface réseau 1) : NAT
-- Network Adapter 2 (Interface réseau 2) : Bridgée
+Sous Debian, ces interfaces apparaissent souvent comme `ens33` (NAT) et `ens34` (Bridge).
 
-Sous **Debian**, les interfaces réseaux apparaîtront respectivement comme ens33 et ens34.
+---
 
-## 1 - VoIP / SIP avec FreePBX (Asterisk)
+## VoIP / SIP avec FreePBX (Asterisk)
 
-FreePBX fournis une interface d’administration web simple et intuitive, tout en reposant sur la robustesse du moteur de téléphonie Asterisk. FreePBX est né en 2004 sous le nom d’Asterisk Management Portal, dans le but de simplifier l’administration d’Asterisk. Au fil des années, rebaptisé en FreePBX, il est devenu l’une des solutions de référence pour la gestion de la téléphonie IP dans l’écosystème open source.
+### II 4.1. Rappels sur SIP et la VoIP
 
-En plus de reposer sur une large communauté et de proposer de nombreuses fonctionnalités avancées (gestion des extensions, lignes SIP, files d’attente d’appels, conférences, etc.), FreePBX a longtemps été distribué sous forme d’une distribution Linux indépendante basée sur RHEL (Red Hat Enterprise Linux) — une solution plus robuste pour un usage d’entreprise mais plus complexe à installer. Depuis la version 17, FreePBX est désormais porté sur Debian ce qui facilite grandement l’installation et la maintenance.
+**SIP** (Session Initiation Protocol) est un protocole de signalisation utilisé pour initier, modifier et terminer des sessions multimédias (voix, vidéo, messagerie instantanée, etc.). Il s’appuie souvent sur le **port UDP 5060**. Une session SIP s’articule avec le **protocole RTP** (Real-time Transport Protocol), chargé du transport des flux audio et/ou vidéo.  
 
-#### Étape 1 : Création et installation de la machine virtuelle
+**Asterisk** est un serveur de téléphonie IP (IP-PBX) open source maintenu par Digium. **FreePBX** en est la couche d’administration web, facilitant la gestion des extensions, trunks, règles d’appel, etc. 
 
-- Télécharger l’ISO de Debian 12 sur le [site officiel Debian](https://www.Debian.org/)
-- Créer une nouvelle machine virtuelle sur VMWare avec les caractéristiques suivantes :
-  - **CPU : 4 cœurs**
-  - **RAM : 4 Go**
-  - **Stockage : 32 Go**
+### II 4.2. Installation et configuration du serveur FreePBX
 
-* Configurer les interfaces réseau en suivant la procédure dans les pré-requis
-* Démarrer la machine virtuelle et installer Debian
-* Sélectionner **ens33 (NAT)** comme interface principale
-![image-20250315135052350](img/image-20250315135052350.png)
-* Ne pas définir de mot de passe root, le compte créé sera membre du groupe sudoers
-![image-20250315135239614](img/image-20250315135239614.png)
-* Sélectionner **XFCE** comme environnement de bureau (plus léger)
-![image-20250315135552894](img/image-20250315135552894.png)
+#### II 4.2.1. Création de la machine virtuelle Debian
 
-**Debian** est maintenant installé ! Nous allons maintenant configurer les interfaces réseaux.
+1. **Télécharger l’ISO de Debian 12** sur [le site officiel Debian](https://www.debian.org/).  
+2. **Créer une nouvelle machine virtuelle** avec :  
+   - **4 cœurs de CPU**  
+   - **4 Go de RAM**  
+   - **32 Go de stockage**  
+3. **Associer les deux interfaces réseau** (NAT + Bridge) comme expliqué précédemment.  
 
-#### Étape 2 : Configuration des interfaces réseau
+![image-20250315115222963](img/image-20250315115222963.png)
 
-La configuration des adresses IP sous Debian repose par défaut en DHCP via NetworkManager. Notre configuration réseau étant particulière, il est nécessaire de configurer manuellement les interfaces de manière permanente grâce au fichier /etc/network/interfaces.
+1. **Installer Debian**, en sélectionnant :  
 
-- Modifier le fichier de configuration réseau :
+   - L’interface NAT (`ens33`) comme interface principale (DHCP).  
+
+   ![image-20250315135052350](img/image-20250315135052350.png)
+
+   - **Ne pas définir de mot de passe root**, l’utilisateur créé sera sudoers.
+
+   ![image-20250315135239614](img/image-20250315135239614.png)
+
+   - **XFCE** comme environnement de bureau.  
+
+   ![image-20250315135552894](img/image-20250315135552894.png)
+
+#### II 4.2.2. Configuration des interfaces réseau Debian
+
+Par défaut, Debian utilise **NetworkManager** et le DHCP pour configurer ses interfaces. Dans ce scénario, nous voulons :  
+- `ens33` en DHCP (accès internet via NAT).  
+- `ens34` en IP statique (192.168.1.1/24), pour nos équipements LAN.
+
+Éditer le fichier `/etc/network/interfaces` :
 
 ```bash
 sudo nano /etc/network/interfaces
 ```
 
 ```bash
-auto ens33 # Initialisation de l'interface ens33
-iface ens33 inet dhcp # Configuration via DHCP de l'interface ens33
+auto ens33
+iface ens33 inet dhcp
 
-auto ens34 # Initialisation de l'interface ens34
-iface ens34 inet static # Configuration de manière statique de l'interface ens34
-        address 192.168.1.1/24 # L'interface ens34 aura pour addresse 192.168.1.1 avec pour masque de sous-réseau un /24 (255.255.255.0)
+auto ens34
+iface ens34 inet static
+  address 192.168.1.1/24
 ```
 
-* Redémarrer la machine virtuelle pour appliquer les changements
-* Vérifier avec la commande `ip a` que les adresses IP sont correctement attribuées (ens33 doit avoir une IP d’un sous réseau obtenu via un DHCP et ens34 avoir l’IP fixe 192.168.1.1/24)
-* Confirmer l'accès à Internet en exécutant un ```ping 1.1.1.1```
+**Redémarrer** la machine pour appliquer la config. Vérifier avec `ip a` et tester la connectivité internet avec `ping 1.1.1.1`.
+
 ![image-20250315140922264](img/image-20250315140922264.png)
 
-Le réseau de notre Debian est maintenant parfaitement configuré ! Nous allons maintenant installer FreePBX.
+#### II 4.2.3. Installation de FreePBX
 
-#### Étape 3 : Installation de FreePBX
+1. **Exécuter** `sudo su -`.  
+2. **Télécharger** et **exécuter** le script officiel :
 
-Nous allons suivre les instructions du guide officiel présent sur le [GitHub de FreePBX](https://github.com/FreePBX/sng_freepbx_Debian_install)
+   ```shell
+   wget https://github.com/FreePBX/sng_freepbx_Debian_install/raw/master/sng_freepbx_Debian_install.sh -O /tmp/sng_freepbx_Debian_install.sh
+   bash /tmp/sng_freepbx_Debian_install.sh
+   ```
 
-- Exécuter les commandes suivantes  :
-
-```shell
-sudo su -
-wget https://github.com/FreePBX/sng_freepbx_Debian_install/raw/master/sng_freepbx_Debian_install.sh -O /tmp/sng_freepbx_Debian_install.sh
-bash /tmp/sng_freepbx_Debian_install.sh
-```
-
-Le script lance automatiquement l'installation complète de FreePBX avec tous ses modules nécessaires. Cette étape peut prendre du temps, il faut attendre la fin de l'installation sans interruption.
 ![image-20250315141143324](img/image-20250315141143324.png)
 
-À la fin de son exécution, le script affichera des informations telle que l’adresse IP du FreePBX en vert. Nous allons maintenant le configurer avec l’aide de son interface graphique.
+Le script procède à l’installation d’Asterisk et FreePBX. À l’issue, une adresse IP sera indiquée pour accéder à l’interface d’admin.
 
-#### Étape 4 : Configuration de FreePBX
+#### II 4.2.4. Configuration initiale de FreePBX
 
-* Ouvrir un navigateur web et aller sur http://192.168.1.1/
-* Définir le compte utilisateur administrateur de l’instance FreePBX, définir un mail quelconque pour les notifications du système, définir le nom du serveur FreePBX. Puis cliquer sur “Setup System”
+1. **Ouvrir un navigateur web** et aller sur `http://192.168.1.1/`.  
 
 ![image-20250315144016918](img/image-20250315144016918.png)
 
-* Accéder à l’interface d’administration en allant dans l’onglet “FreePBX Administration”. Se connecter avec les identifiants définis précédemment
 
-![image-20250315144135833](img/image-20250315144135833.png)
+2. **Définir** les identifiants administrateur et le nom du serveur.  
 
-* Ignorer toutes les propositions commerciales
+3. **Passer l’interface** en **Français**.  
 
-* Définir la langue du système sur Français
+4. **Ignorer** les propositions commerciales.  
 
-![image-20250315144530686](img/image-20250315144530686.png)
-
-* Laisser les paramètres par défaut du Sangoma Smart Firewall (dire “Yes” à toutes les propositions)
-
-- Ignorer toutes les propositions commerciales
-
-* Pour finaliser l’installation, cliquer sur “Appliquer la configuration” ou “Apply Config” en haut à droite si proposé
+5. **Appliquer** la configuration en cliquant sur “Apply Config”.
 
 ![image-20250315145408133](img/image-20250315145408133.png)
 
-L’instance FreePBX est désormais installée ! Nous allons maintenant déployer des postes SIP pour connecter nos téléphones physiques et virtuels.
+### II 4.3. Création des lignes SIP
 
-#### Étape 5 : Création des comptes SIP
-
-* Aller dans la rubrique “**Connectivité** > **Postes**”
+1. Dans l’interface FreePBX, aller dans **Connectivité > Postes**.  
 
 ![image-20250315152623215](img/image-20250315152623215.png)
 
-* Cliquer sur “**Ajouter un poste**” puis choisir “**Ajout nouveau poste SIP [chan_pjsip]**”
+2. **Ajouter un poste SIP [chan_pjsip]**.  
 
 ![image-20250315153348110](img/image-20250315153348110.png)
 
-* Définir toutes les informations nécessaires au bon fonctionnement de la ligne
-
-  * Extension Utilisateur : Le numéro de la ligne SIP
-  * Nom affiché : Le nom de l’appelant qui sera visible des destinataires
-  * Secret : Le mot de passe du compte SIP qui sera créé pour ce numéro de téléphone
-
-  Il n’est pas nécessaire de modifier les paramètres du gestionnaire d’utilisateur, car celui-ci concerne le service d’annuaire de FreePBX que nous n’utiliserons pas.
-  Une fois les informations rentrées, cliquer sur “Soumettre”
+3. **Renseigner** :  
+   - **Extension Utilisateur** (numéro SIP).  
+   - **Nom affiché** (alias).  
+   - **Secret** (mot de passe).  
 
 ![image-20250315155008665](img/image-20250315155008665.png)
 
-* Créer une seconde ligne SIP pour le téléphone Yealink, ou inversement, pour le Softphone
-* Après avoir créé les lignes SIP, appliquer la configuration en cliquant sur “Appliquer la configuration”
+4. **Soumettre** puis **Appliquer la configuration**.
 
 ![image-20250315155456600](img/image-20250315155456600.png)
 
-Les comptes / lignes SIP sont désormais créées, nous allons pouvoir connecter des clients SIP pour passer des appels.
+5. **Faire de même** pour avoir **2 lignes SIP**.
 
-#### Étape 6.1 : Connecter un client SIP Softphone
+### II 4.4. Connexion d’un client SIP (Softphone Linphone)
 
-Nous utiliserons une machine Linux pour sa légèreté avec le client Linphone dessus. Il est également possible sous Windows d’utiliser le client MicroSIP.
+**Linphone** est un softphone libre disponible sous Linux.
 
-* Installer une seconde machine Debian avec la même procédure que pour le serveur FreePBX (faire attention à la configuration des interfaces réseau sur VMWare)
-
-* Configurer les interfaces réseaux
-
-```shell
-sudo nano /etc/network/interfaces
-```
-
-```shell
-auto ens33 # Initialisation de l'interface ens33
-iface ens33 inet dhcp # Configuration via DHCP de l'interface ens33
-
-auto ens34 # Initialisation de l'interface ens34
-iface ens34 inet static # Configuration de manière statique de l'interface ens34
-        address 192.168.1.2/24 # L'interface ens34 aura pour addresse 192.168.1.2 avec pour masque de sous-réseau un /24 (255.255.255.0)
-```
-
-* Installer le softphone SIP Liphone
-
-```shell
-sudo apt update
-sudo apt install linphone -y
-```
-
-* Ouvrir Linphone
-
-![image-20250315163004388](img/image-20250315163004388.png)
-
-* Sélectionner “Utiliser un compte SIP” et accepter les conditions d’utilisation
-
-![image-20250315163059002](img/image-20250315163059002.png)
-
-![image-20250315163121066](img/image-20250315163121066.png)
-
-
-> [!WARNING]  
-> Il ne faut pas que Linphone soit installé sur la même machine qu’un serveur Asterisk. Il y a un conflit de ports l’empêchant de fonctionner. Sur les machines de TP il est préférable d’éteindre le service Asterisk si installé : `systemctl stop asterisk`
-* Renseigner les informations du compte SIP créé précédemment
-
-  * Nom d’utilisateur : Numéro de ligne SIP
-  * Nom d’affichage : Numéro de l’appelant, visible du destinataire
-  * Domaine SIP : Adresse IP du serveur FreePBX (192.168.1.1)
-  * Transport : UDP (port 5060 par défaut d’Asterisk)
-
-  Puis cliquer sur “Utiliser”
+1. **Créer une seconde machine Debian** pour le softphone, configuration réseau similaire (DHCP sur `ens33`, statique sur `ens34` à 192.168.1.2).  
+2. **Installer** Linphone :  
+   
+   ```shell
+   sudo apt update
+   sudo apt install linphone -y
+   ```
+3. Lancer Linphone et **connecter un compte SIP** :  
+   - **Nom d’utilisateur** = Extension SIP (ex. 100).  
+   - **Nom d’affichage** = Alias.
+   - **Domaine SIP** = 192.168.1.1.  
+   - **Mot de passe** = Secret.
+   - **Transport** = UDP (5060).  
+   
 
 ![image-20250315163216375](img/image-20250315163216375.png)
 
-* Si toutes les informations rentrées sont valides, alors Linphone doit ouvrir une session SIP et passer en vert en haut à gauche comme ci-dessous :
-
-> [!WARNING]  
-> Si jamais des informations erronées ont été rentrées par erreur, il est possible que le Sangoma Firewall bannisse l’adresse IP du client.
-> Pour lister les bannissements, sur le serveur FreePBX : `fail2ban-client banned`
-> Pour débannir toutes les adresses IPs, sur le serveur FreePBX : `fail2ban-client unban --all`
+**Une fois connecté**, Linphone doit passer en **vert** en **haut à gauche** :
 
 ![image-20250315163711564](img/image-20250315163711564.png)
 
-* Appeler ```*97``` (le numéro de la boîte vocale) et vérifier si l’appel fonctionne
+4. **Tester** en appelant `*97` (boîte vocale d’Asterisk).
 
 ![image-20250315163850005](img/image-20250315163850005.png)
 
 > [!WARNING]  
-> Si jamais l’appel ne passe pas, vérifier les configurations IP des machines, il faut qu’elles soient toutes sur le même réseau local.
-> Vérifier également l’état du son sous linux, ou analyser les trames réseau avec Wireshark.
+> Si un mauvais mot de passe SIP est saisi, **Fail2Ban** peut bannir votre IP. Sur le serveur FreePBX :  
+> - Lister les bannissements : `fail2ban-client banned`  
+> - Débannir tous : `fail2ban-client unban --all`
 
-Nous avons maintenant un Softphone SIP connecté à notre FreePBX ! Pour passer un appel entre deux téléphones, nous pouvons utiliser deux Softphone SIP, mais l’IUT mets à disposition des Yealink T42U. Voyons maintenant comment les configurer.
+### II 4.5. Connexion d’un téléphone Yealink T42U
 
-#### Étape 6.2 : Connecter un Yealink T42U
+Les téléphones Yealink s’utilisent souvent en entreprise. Pour les configurer il faut :
 
-*Cette partie s’appuie grandement sur le [cours](./pdf/R316-ROM-cours.pdf) et [TPs](./pdf/R316-ROM-tp.pdf) de [Sami Evangelista](https://lipn.fr/~evangelista/)*
+1. **Réinitialiser** le téléphone en mode usine (maintenir OK, valider la remise à zéro).  
+2. **Configurer statiquement** l’IPv4 dans le menu “3 Settings -> 2 Advanced Settings (password = admin) -> 2 Network -> 1 WAN Port -> 2 Static IPv4 Client”  
+   - **Adresse IP** : 192.168.1.3/24  
+   - **Passerelle** : 192.168.1.1 (IP du FreePBX)  
+3. **Activer la ligne SIP** dans “3 Settings -> 2 Advanced Settings -> 1 Accounts -> 1.”  
+   - **Display Name** : Nom de l’appelant
+   - **Register Name + User Name** = Numéro SIP  
+   - **Password** = Secret SIP  
+   - **SIP Server 1** : 192.168.1.1  
+4. **Sauvegarder** et **tester** en appelant `*97`. 
 
-Les téléphones Yealink sont succeptibles d’avoir été utilisés par un autre groupe, et de ne pas avoir été réinitialisé. Nous commençons donc par redémarrer le téléphone en mode usine pour revenir à une configuration vierge.
+### II 4.6. Bonus : Auto-Provisioning des Yealink
 
-* Mettre le téléphone sous tension
-* Laisser le bouton OK appuyé pendant quelques secondes puis confirmer le redémarrage.
+Afin de déployer rapidement un parc de téléphones Yealink, on peut automatiser leur configuration via :
 
-Une fois le téléphone redémarré, nous allons configurer statiquement ses paramètres IP.
+1. **DHCP** (fournissant l’IP du serveur TFTP).  
+2. **TFTP** (hébergeant les fichiers de config associées aux MAC des téléphones).
 
-* Aller dans le menu “3 Settings” -> “2 Advanced Settings” (le mot de passe est admin) -> “2 Network” -> “1 WAN Port” -> “2 IPv4” -> “2 Static IPv4 Client”
-* Définir une IP du réseau 192.168.1.0/24 (ex : 192.168.1.3), et choisir comme passerelle l’IP du FreePBX (ex : 192.168.1.1)
-* Sauvegarder les paramètres en cliquant sur “Save”
+> [!NOTE]  
+> TFTP (Trivial File Transfer Protocol) utilise le port UDP 69 et ne gère pas nativement l’authentification. D’où l’importance de le restreindre au LAN.
 
-Une fois la configuration IP appliquée, vérifier que le téléphone est bien connecté au réseau en effectuant un ping depuis le FreePBX.
+**Sur le serveur FreePBX** :
 
-Nous allons maintenant configurer la ligne SIP associée au téléphone
+1. Installer `isc-dhcp-server` :  
+   ```shell
+   sudo apt update
+   sudo apt install isc-dhcp-server -y
+   ```
+2. Éditer `/etc/default/isc-dhcp-server` pour écouter sur `ens34` :
+   ```shell
+   INTERFACESv4="ens34"
+   ```
+3. Éditer `/etc/dhcp/dhcpd.conf` :
+   ```shell
+   subnet 192.168.1.0 netmask 255.255.255.0 {
+       range 192.168.1.10 192.168.1.100;
+       option routers 192.168.1.1;
+       option tftp-server-name "tftp://192.168.1.1";
+   }
+   ```
+4. Créer le fichier TFTP `<mac-du-telephone>.cfg` dans `/tftpboot/` :
 
-* Aller dans le menu “3 Settings” -> “2 Advanced Settings” -> “1 Accounts” -> “1.”
-* Passer “Active line” à “Enabled”
-* Saisir les paramètres suivants :
-  * Display Name : Le nom qui s’affichera quand le destinataire recevra un appel
-  * Register Name : Numéro de ligne SIP
-  * User Name : Numéro de ligne SIP
-  * Password : Mot de passe de la ligne SIP
-  * SIP Server 1 : L’IP du serveur FreePBX
-* Sauvegarder les paramètres en cliquant sur “Save”
+   ```bash
+   #!version:1.0.0.1
+   account.1.enable = 1
+   account.1.label = <Numéro SIP>
+   account.1.display_name = <Nom du compte>
+   account.1.auth_name = <Numéro SIP>
+   account.1.user_name = <Numéro SIP>
+   account.1.pasword = <Mot de passe SIP>
+   account.1.sip_server.1.address = <IP du FreePBX>
+   lang.gui = French
+   ```
+5. Redémarrer `isc-dhcp-server` et `tftpd-hpa` :
 
-Une fois les paramètres saisis, si l’on reviens sur l’écran d’accueil, le Display Name devrait s’afficher sur l’écran du téléphone.
+   ```shell
+   sudo systemctl restart isc-dhcp-server tftpd-hpa
+   ```
+6. **Réinitialiser** le Yealink et vérifier qu’il obtient bien son IP via DHCP et télécharge sa configuration via TFTP.
+7. **Tester** en appelant le `*97`.
 
-> [!WARNING]  
-> Si jamais des informations erronées ont été rentrées par erreur, il est possible que le Sangoma Firewall bannisse l’adresse IP du téléphone.
-> Pour lister les bannissements, sur le serveur FreePBX : `fail2ban-client banned`
-> Pour débannir toutes les adresses IPs, sur le serveur FreePBX : `fail2ban-client unban --all`
+---
 
-* Vérifier le bon fonctionnement du téléphone en appelant le ```*97```
-* Effectuer un appel entre le Softphone et le Yealink
+## WebRTC avec Jitsi Meet
 
-Notre serveur FreePBX est désormais entièrement installé. Nous avons vu comment créer des lignes SIP et passer des appels entre différents postes.
+### III 5.1. Présentation générale de WebRTC et Jitsi
 
-#### Étape 7 (Bonus) : Auto-Provisioning des Yealink
+**WebRTC** (Web Real-Time Communication) est un ensemble d’API et de protocoles (notamment **ICE, STUN, TURN**) permettant la communication audio/vidéo directement dans le navigateur web. Il utilise SRTP (RTP chiffré) pour le transport et s’appuie généralement sur un serveur d’**interopérabilité** (Jitsi, par exemple) pour la découverte et la gestion des flux.
 
-*Cette partie s’appuie grandement sur le [cours](./pdf/R316-ROM-cours.pdf) et [TPs](./pdf/R316-ROM-tp.pdf) de [Sami Evangelista](https://lipn.fr/~evangelista/)*
+**Jitsi** est un ensemble de projets open source pour la visioconférence (Jitsi Meet), la passerelle SIP (Jigasi), et la gestion multipoint (Jicofo).  
 
-Jusqu’ici, il est nécessaire de configurer manuellement les adresses IP et numéros SIP sur les téléphones Yealink, ce qui peut-être fort contraignant en entreprise quand on a un grand parc de téléphones à gérer. Nous allons donc implémenter un serveur DHCP qui s’occupera de faire un auto-provisioning des téléphones.
+### III 5.2. Installation de Jitsi Meet via Docker
 
-Au démarrage, un téléphone va dans un premier temps obtenir une configuration IP auprès d’un serveur DHCP. Le téléphone va ensuite contacter le serveur TFTP transmis  par le serveur DHCP pour télécharger certains fichiers de configuration. Ceux-ci contiendrons, par exemple, l’IP et le port du serveur FreePBX, le numéro de téléphone, ou la langue de l’interface du téléphone.
+Nous allons installer Jitsi Meet **sur la même machine** que FreePBX, grâce à Docker.
 
-Les commandes sont à effectuer sur le serveur FreePBX.
+#### III 5.2.1. Préparer FreePBX pour l’intégration SIP
 
-- Installer isc-dhcp-server
-
-```shell
-sudo apt update
-sudo apt install isc-dhcp-server -y
-```
-
-- Configurer l’interface d’écoute du serveur DHCP
-
-```shell
-sudo nano /etc/default/isc-dhcp-server
-```
-
-```shell
-INTERFACESv4="ens34" # On écoute sur l'interface LAN du Debian
-```
-
-- Configurer le sous-réseau annoncé par le serveur DHCP
-
-```shell
-sudo nano /etc/dhcp/dhcpd.conf
-```
-
-```shell
-# Configuration DHCP pour le sous-réseau 192.168.1.0/24
-subnet 192.168.1.0 netmask 255.255.255.0 {
-    # Plage d'adresses attribuées par le DHCP
-    range 192.168.1.10 192.168.1.100;
-    # Default Gateway du réseau
-    option routers 192.168.1.1;
-    # Adresse du serveur TFTP (qui héberge les fichiers de configuration)
-    option tftp-server-name "tftp://192.168.1.1";
-}
-```
-
-Après avoir contacté le serveur DHCP, le téléphone va ensuite contacter le serveur TFTP. Le téléphone demande plusieurs fichiers de configurations, notamment un qui est nommé d’après l’adresse MAC du téléphone. Celle-ci étant à priori unique, c‘est le moyen utilisé pour identifier le téléphone.
-
-- Créer dans le répertoire /tftpboot/ un fichier `<adresse-mac-du-telephone>.cfg` (dans les deux-points et avec les caractères alphabétiques en minuscule)
-
-```
-sudo nano /tftpboot/addressemacdutelephone.cfg
-```
-
-```
-#!version:1.0.0.1
-account.1.enable = 1
-account.1.label = <Numéro de téléphone SIP>
-account.1.display_name = <Nom de l'appelant>
-account.1.auth_name = <Numéro de Téléphone SIP>
-account.1.user_name = <Numéro de Téléphone SIP>
-account.1.pasword = <Mot de passe du numéro SIP>
-account.1.sip_server.1.address = <IP du serveur FreePBX>
-lang.gui = French
-```
-
-- Redémarrer le serveur DHCP et le serveur TFTP pour appliquer les configurations
-
-```
-sudo systemctl restart isc-dhcp-server tftpd-hpa
-```
-
-- Redémarrer le téléphone Yealink en mode usine et vérifier si le téléphone récupère le compte SIP
-
-- Vérifier le bon fonctionnement du téléphone en appelant le ```*97```
-
-FreePBX possède un nombre inombrable de fonctionnalités, mais nous avons fait le tour de celles essentielles. Voyons désormais comment mêler VoIP et WebRTC en déployant un Jitsi Meet.
-
-## 2 - Jitsi Meet
-
-Jitsi Meet est une plateforme de visioconférence open source basée sur le protocole WebRTC. Elle offre un large éventail de fonctionnalités (partage d’écran, messagerie instantanée, enregistrement des appels, etc.) et ne nécessite pas la création de comptes spécifiques. Grâce à son architecture ouverte et à sa communauté active, Jitsi Meet peut être facilement personnalisé et intégré à d’autres services, notamment des systèmes de téléphonie tels que FreePBX grâce au protocole SIP.
-
-Pour innover nous allons faire fonctionner Jitsi Meet avec des conteneurs grâce à Docker. Docker est un outil de conteneurisation qui permet d’exécuter des applications de manière isolée, cohérente et reproductible. Cette approche facilite la distribution des services et simplifie la maintenance, tout en offrant une meilleure flexibilité et une plus grande évolutivité.
-
-Nous allons faire tourner Jitsi Meet sur la même machine que le FreePBX.
-
-#### Étape 0 : Préparer FreePBX
-
-Pour que Jitsi puisse être relié à notre FreePBX afin d’effectuer des appels de la conférence web aux téléphones SIP virtuels et physiques, il est nécessaire de créer un compte SIP pour Jitsi.
-
-- Créer un poste SIP pour Jitsi avec pour numéro 1000, le secret sera par défaut “jitsi”
+1. **Créer un compte SIP** dédié à Jitsi :  
+   - Numéro SIP = 1000  
+   - Mot de passe = “jitsi”  
 
 ![image-20250315220329769](img/image-20250315220329769.png)
 
-#### Étape 1 : Installer Docker
+#### III 5.2.2. Installer Docker
 
-Docker s’appuie sur des fonctionnalités du kernel Linux mais n’est pas installé par défaut.
+Sur Debian, saisir :
 
-- Installer Docker en exécutant la commande suivante :
-
-```
+```shell
 sudo curl -sSL https://get.docker.com/ | bash
 ```
 
-#### Étape 2 : Installer Jitsi
+#### III 5.2.3. Déployer Jitsi Meet avec Jigasi
 
-Cette partie s’appuie fortement sur la [documentation officielle de Jitsi](https://jitsi.github.io/handbook/docs/devops-guide/devops-guide-docker/)
+1. **Télécharger** la release stable Jitsi :  
+   ```shell
+   wget $(curl -s https://api.github.com/repos/jitsi/docker-jitsi-meet/releases/latest | grep 'zip' | cut -d\" -f4)
+   unzip stable*
+   cd jitsi*
+   ```
+2. **Copier** le fichier d’environnement et générer des mots de passe :
+   ```shell
+   cp env.example .env
+   ./gen-passwords.sh
+   ```
+3. **Créer** les dossiers de configuration :
+   ```shell
+   mkdir -p ~/.jitsi-meet-cfg/{web,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri}
+   ```
+4. **Personnaliser** le fichier `.env` :
 
-Les commandes qui suivent seront à exécuter en tant qu’utilisateur root sur le serveur FreePBX.
+   ```shell
+   cat <<EOF >> .env
+   PUBLIC_URL=https://192.168.1.1:8443
+   JVB_ADVERTISE_IPS=192.168.1.1
+   JIGASI_SIP_URI=1000@192.168.1.1
+   JIGASI_SIP_PASSWORD=jitsi
+   JIGASI_SIP_SERVER=192.168.1.1
+   JIGASI_SIP_PORT=5060
+   JIGASI_SIP_TRANSPORT=UDP
+   ENABLE_LETS_ENCRYPT=0
+   JVB_DISABLE_STUN=true
+   TZ=Europe/Paris
+   ENABLE_AUTH=0
+   ENABLE_GUESTS=1
+   EOF
+   ```
+5. **Générer les certificats SSL** auto-signés et adapter le `docker-compose.yml` :
+   ```shell
+   mkdir -p ./config/web/certs
+   if [ ! -f "./config/web/certs/cert.crt" ] || [ ! -f "./config/web/certs/cert.key" ]; then
+       openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+           -keyout "./config/web/certs/cert.key" \
+           -out "./config/web/certs/cert.crt" \
+           -subj "/C=FR/ST=Ile-de-France/L=Villetaneuse/O=Universite Sorbonne Paris Nord/OU=IUT de Villetaneuse/CN=SAÉ.iutv.univ-paris13.fr"
+   fi
+   
+   sed -i '/- ${CONFIG}\/web:\/config:Z/ a\
+               - .\/config\/web\/certs\/cert.crt:\/config\/keys\/cert.crt:Z\
+               - .\/config\/web\/certs\/cert.key:\/config\/keys\/cert.key:Z' docker-compose.yml
+   ```
+6. **Démarrer** Jitsi Meet et Jigasi :
 
-* Télécharger la dernière version de Jitsi Meet depuis GitHub
-
-```shell
-wget $(curl -s https://api.github.com/repos/jitsi/docker-jitsi-meet/releases/latest | grep 'zip' | cut -d\" -f4)
-```
-
-- Décompresser l’archive téléchargée
-
-```shell
-unzip stable*
-```
-
-- Aller dans le dossier décompressé
-
-```shell
-cd jitsi*
-```
-
-- Copier le fichier de variables d’environnement exemple en fichier de variables d’environnement de production
-
-```shell
-cp env.example .env
-```
-
-- Générer des mots de passes aléatoires pour remplir le fichier de variables d’environnement
-
-```shell
-./gen-passwords.sh
-```
-
-- Créer les dossiers de configurations des différents modules de Jitsi Meet
-
-```shell
-mkdir -p ~/.jitsi-meet-cfg/{web,transcripts,prosody/config,prosody/prosody-plugins-custom,jicofo,jvb,jigasi,jibri}
-```
-
-- Définir les variables d’environnement propre à notre SAÉ, avec l’intégration SIP de FreePBX
-
-```shell
-cat <<EOF >> .env
-# URL pour accéder au Jitsi Meet (IP du FreePBX + port HTTPS 8443 avec certificat auto-signé)
-PUBLIC_URL=https://192.168.1.1:8443
-# Adresse du serveur Jitsi Meet annoncé par le Jitsi Video Bridge (STUN)
-JVB_ADVERTISE_IPS=192.168.1.1
-# URI du compte SIP créé précédemment pour Jitsi Meet (numéro-sip@ip-freepbx)
-JIGASI_SIP_URI=1000@192.168.1.1
-# Mot de passe du compte SIP créé pour Jitsi Meet
-JIGASI_SIP_PASSWORD=jitsi
-# Addresse IP du serveur SIP FreePBX
-JIGASI_SIP_SERVER=192.168.1.1
-# Port du serveur SIP FreePBX (5060 est le port par défaut d'Asterisk)
-JIGASI_SIP_PORT=5060
-# Protocole du serveur SIP FreePBX (UDP/5060 est le protocole/port par défaut d'Asterisk)
-JIGASI_SIP_TRANSPORT=UDP
-# Désactivation de la génération de certificats SSL par Let's Encrypt (car environnement local)
-ENABLE_LETS_ENCRYPT=0
-# Désactivation de l'annonce d'IP publique pour le WebRTC (car environnement local)
-JVB_DISABLE_STUN=true
-# Définition du fuseau horaire de l'environnement (Europe/Paris car nous sommes à Villetaneuse)
-TZ=Europe/Paris
-# Désactivation de la nécessité d'authentification
-ENABLE_AUTH=0
-# Autorisation de l'accès invité
-ENABLE_GUESTS=1
-EOF
-```
-
-- Générer les certificats SSL auto-signés et les ajouter au docker-compose.yml (Sans certificat SSL, le WebRTC ne fonctionne pas sur les navigateurs web récents par principe de sécurité)
-
-```shell
-mkdir -p ./config/web/certs
-if [ ! -f "./config/web/certs/cert.crt" ] || [ ! -f "./config/web/certs/cert.key" ]; then
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout "./config/web/certs/cert.key" \
-        -out "./config/web/certs/cert.crt" \
-        -subj "/C=FR/ST=Ile-de-France/L=Villetaneuse/O=Universite Sorbonne Paris Nord/OU=IUT de Villetaneuse/CN=SAÉ.iutv.univ-paris13.fr"
-fi
-sed -i '/- ${CONFIG}\/web:\/config:Z/ a\
-            - .\/config\/web\/certs\/cert.crt:\/config\/keys\/cert.crt:Z\
-            - .\/config\/web\/certs\/cert.key:\/config\/keys\/cert.key:Z' docker-compose.yml
-```
-
-- Démarrer Jitsi Meet et Jigasi (module SIP) en arrière-plan
-
-```shell
-docker compose -f docker-compose.yml -f jigasi.yml up -d
-```
+   ```shell
+   docker compose -f docker-compose.yml -f jigasi.yml up -d
+   ```
+   
 
 ![image-20250316134823346](img/image-20250316134823346.png)
 
-Une fois que Docker a pull et run les différents micro services composant Jitsi Meet, on peut retrouver Jitsi Meet depuis un navigateur web à l’URL suivante : https://192.168.1.1:8443
+Accès à l’application : [https://192.168.1.1:8443](https://192.168.1.1:8443).
 
 ![image-20250316133707590](img/image-20250316133707590.png)
 
-Maintenant que notre instance Jitsi Meet est déployée, nous allons explorer quelques fonctionnalités qu’offre le service.
+### III 5.3. Visioconférence et intégration SIP avec Jitsi
 
-#### Étape 3 : Visioconférence + SIP
-
-- Démarrer une salle de conférence avec pour membres deux ordinateurs sur le même réseau local
-
-* Ajouter un numéro de téléphone SIP à la visioconférence (bouton “Inviter des participants”)
+1. **Créer** une salle de conférence et inviter un autre poste via l’URL.  
+2. **Ajouter** un numéro SIP (ex. poste 100, 101, etc.).  
 
 ![image-20250316134116869](img/image-20250316134116869.png)
 
 ![image-20250316134141307](img/image-20250316134141307.png)
 
-![image-20250316134853967](img/image-20250316134853967.png)
-
-Le téléphone SIP devrait recevoir un appel du numéro Jitsi (1000), si le téléphone est décroché, il sera automatiquement joint à la visioconférence.
+3. **Décrocher** le téléphone IP pour rejoindre la conférence WebRTC.
 
 ![image-20250316134255029](img/image-20250316134255029.png)
 
-Jitsi Meet est une implémentation relativement simple de WebRTC, et rapide à connecter à un serveur SIP. Cependant il est intéressant d’apprendre à manipuler des technologies ne reposant pas sur les mêmes principes et protocoles comme Nextcloud Hub.
+Cette solution illustre l’interconnexion d’un **protocole de visioconférence WebRTC** avec un **serveur SIP** (Asterisk/FreePBX), permettant un pont entre le monde de la téléphonie classique et la visioconférence web.
 
-### 3 - Nextcloud Hub
+---
 
-Après avoir déployé une solution « Historique » (Asterisk) puis « Hybride » (Jitsi), nous allons aller plus loin en mettant en place une plateforme de collaboration moderne : Nextcloud. Nextcloud est l’équivalent open source et européen de Office 365 ou Google Workspace, offrant des fonctionnalités de partage et d’édition collaborative de documents, un agenda, une messagerie, une gestion des tâches et bien plus encore. Sa nature open source garantit une grande souplesse d’adaptation et une maîtrise complète des données.
+## All-in-One avec Nextcloud Hub
 
-Comme pour Jitsi, nous allons déployer Nextcloud au sein de conteneurs Docker afin de simplifier l’installation, la maintenance et la mise à l’échelle. Nous utiliserons en complément l’outil WatchTower, qui assurera la mise à jour automatique des conteneurs, nous permettant de bénéficier des dernières versions de Nextcloud et de ses composants sans effort supplémentaire.
+### IV 6.1. Contexte et principe de Nextcloud
 
-#### Étape 1 : Créer et démarrer le fichier compose.yaml
+**Nextcloud** est une plateforme de collaboration et de stockage de fichiers en ligne auto-hébergée. Elle propose un large éventail de fonctionnalités :  
+- Partage et synchronisation de fichiers.  
+- Édition collaborative de documents (via OnlyOffice ou Collabora).  
+- Messagerie instantanée (Talk), agenda, contacts, etc.  
 
-Les commandes sont à exécuter sur le serveur FreePBX en tant qu’utilisateur root.
+L’auto-hébergement avec **Docker** permet :  
+- Une installation centralisée et modulaire.  
+- Des mises à jour simplifiées.  
+- Une répartition des ressources plus efficace.
 
-- Créer un dossier nextcloud dans lequel nous stockerons toutes les données relatant de nextcloud
+**WatchTower** est un service qui surveille et met automatiquement à jour les conteneurs Docker.
 
-```shell
-mkdir nextcloud
-```
+### IV 6.2. Déploiement de Nextcloud via Docker et WatchTower
 
-- Aller dans le dossier nextcloud
+Nous allons exécuter Nextcloud **sur la même machine** FreePBX/Jitsi. **Il faut être connecté en tant qu’utilisateur root** !
 
-```shell
-cd nextcloud
-```
+1. **Créer** un dossier `nextcloud` :
+   ```shell
+   mkdir nextcloud
+   cd nextcloud
+   ```
+2. **Créer** le fichier `compose.yaml` :
 
-- Créer le fichier compose.yaml, il possèdera toutes les informations de nos containers Docker
+   ```yaml
+   services:
+     # Service n°1 : Application Nextcloud
+     nextcloud:
+       image: ghcr.io/linuxserver/nextcloud:latest
+       container_name: nextcloud
+       environment:
+         - PUID=1000
+         - PGID=1000
+         - TZ=Europe/Paris
+       volumes:
+         - ./nextcloud_config/:/config
+         - ./nextcloud_data:/data
+       ports:
+         - 7443:443
+       restart: unless-stopped
+   
+     # Service n°2 : Base de données MariaDB
+     mariadb:
+       image: ghcr.io/linuxserver/mariadb:latest
+       container_name: mariadb
+       environment:
+         - PUID=1000
+         - PGID=1000
+         - TZ=Europe/Paris
+         - MYSQL_ROOT_PASSWORD=root
+         - MYSQL_DATABASE=nextcloud
+         - MYSQL_USER=nextcloud
+         - MYSQL_PASSWORD=nextcloud
+       volumes:
+         - ./mariadb_config/:/config
+       restart: unless-stopped
+   
+     # Service n°3 : WatchTower pour mise à jour automatique
+     watchtower:
+       container_name: watchtower
+       image: containrrr/watchtower
+       volumes:
+         - '/var/run/docker.sock:/var/run/docker.sock'
+       restart: unless-stopped
+       environment:
+         - WATCHTOWER_CLEANUP=true
+         - TZ=Europe/Paris
+         - WATCHTOWER_INCLUDE_RESTARTING=true
+         - WATCHTOWER_POLL_INTERVAL=3600
+         - WATCHTOWER_ROLLING_RESTART=true
+   ```
+3. **Démarrer** la stack :
 
-```
-nano compose.yaml
-```
+   ```shell
+   docker compose up -d
+   ```
+4. **Accéder** à l’interface Nextcloud :  
+   [https://192.168.1.1:7443](https://192.168.1.1:7443)
 
-```yaml
-services:
-  # Service n°1 : Application Nextcloud
-  nextcloud:
-    # Image "latest" de LinuxServer.io pour l'application Nextcloud
-    image: ghcr.io/linuxserver/nextcloud:latest
-    # Nom du container
-    container_name: nextcloud
-    # Variables d'environnement pour les permissions de fichiers et fuseau horaire
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Paris
-    # Volumes persistants pour conserver les données après redémarrage
-    volumes:
-      - ./nextcloud_config/:/config # Fichiers de configuration
-      - ./nextcloud_data:/data # Données des comptes Nextcloud
-    # Ports ouverts à la machine hôte (hôte:container)
-    ports:
-      - 7443:443
-    # Politique de redémarrage du container (tant qu'il n'est pas arrêté on le restart automatiquement)
-    restart: unless-stopped
-  # Service n°2 : Base de données MariaDB
-  mariadb:
-  	# Image "latest" de LinuxServer.io pour l'application MariaDB
-    image: ghcr.io/linuxserver/mariadb:latest
-    # Nom du container
-    container_name: mariadb
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Paris
-      - MYSQL_ROOT_PASSWORD=root # Mot de passe root de la base de données
-      - MYSQL_DATABASE=nextcloud # Nom de la base de données
-      - MYSQL_USER=nextcloud # Nom d'utilisateur administrateur de la base de données créée ci-dessus
-      - MYSQL_PASSWORD=nextcloud # Mot de passe de l'utilisateur administrateur de la base de données
-    # Volumes persistants pour conserver la base de données après redémarrage
-    volumes:
-      - ./mariadb_config/:/config # Fichiers de la base de données
-    restart: unless-stopped
-  # Service n°3 : Outil WatchTower de mises à jour automatique des containers
-  watchtower:
-    container_name: watchtower
-    image: containrrr/watchtower
-    # Accède au socket Docker pour avoir un accès à tous les autres conteneurs Docker
-    volumes:
-      - '/var/run/docker.sock:/var/run/docker.sock'
-    restart: unless-stopped
-    # Variables d'environnement pour politique de redémarrage spécifique
-    environment:
-      - WATCHTOWER_CLEANUP=true
-      - TZ=Europe/Paris
-      - WATCHTOWER_INCLUDE_RESTARTING=true
-      - WATCHTOWER_POLL_INTERVAL=3600
-      - WATCHTOWER_ROLLING_RESTART=true
-```
-
-- Démarrer la stack
-
-```
-docker compose up -d
-```
-
-Une fois la stack démarrée, l’interface web de Nextcloud est accessible à l’adresse suivante : https://192.168.1.1:7443. Il faut désormais configurer Nextcloud.
-
-#### Étape 2 : Installer Nextcloud
-
-- Accéder à Nextcloud via l’URL https://192.168.1.1:7443
+### IV 6.3. Installation et configuration de Nextcloud
 
 ![image-20250316003659370](img/image-20250316003659370.png)
 
-- Définir les identifiants du compte administrateur de l’instance Nextcloud
-
-- Configurer comme type de base de donnés “MySQL/MariaDB” et utiliser les identifiants suivants (extraits du compose.yaml) :
-
-  - Compte de base de données : nextcloud
-  - Mot de passe de la base de données : nextcloud
-  - Nom de la base de données : nextcloud
-  - Hôte de la base de données : mariadb (ne pas confondre avec l’IP de la machine, ce sont les noms des réseaux containers)
-
-  Une fois toutes les informations remplies, cliquer sur “Installer”
-
-- Installer les applications recommandées
-
-![image-20250316003800348](img/image-20250316003800348.png)
-
-##### Étape 3 : Configurer / Découvrir Nextcloud
-
-- Créer des comptes utilisateurs depuis le menu “Comptes”
-
-![image-20250316003929728](img/image-20250316003929728.png)
-
-- Tester les applications : Notes, Mails, Calendrier, Contacts
-
-- Depuis l’application Talk, créer un groupe de discussion et effectuer un appel entre plusieurs ordinateurs du même réseau local
+1. **Créer le compte administrateur** Nextcloud.  
+2. **Choisir MariaDB** comme base de données :
+   - Utilisateur : `nextcloud`  
+   - Mot de passe : `nextcloud`  
+   - Nom de la base : `nextcloud`  
+   - Hôte : `mariadb` (nom du service Docker)  
+3. **Valider** l’installation.  
+4. Vous pouvez alors **créer des comptes utilisateurs**, tester le module **Talk** (discussion instantanée et appels audio/vidéo internes), l’agenda, etc.
 
 ![image-20250316004014530](img/image-20250316004014530.png)
-
-Nous avons installé nexcloud !
